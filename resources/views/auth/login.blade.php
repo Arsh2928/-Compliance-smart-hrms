@@ -23,33 +23,54 @@
 
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
-        <input id="password" type="password"
-               class="form-control @error('password') is-invalid @enderror"
-               name="password" required placeholder="••••••••">
-        @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <div class="input-group auth-password-group">
+            <input id="password" type="password"
+                   class="form-control @error('password') is-invalid @enderror"
+                   name="password" required placeholder="••••••••">
+            <button class="btn btn-outline-secondary auth-password-toggle" type="button" id="togglePassword" aria-label="Show password">
+                <i class="bi bi-eye"></i>
+            </button>
+            @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        </div>
     </div>
 
     <div class="d-flex align-items-center justify-content-between mb-4">
         <div class="form-check mb-0">
             <input type="checkbox" class="form-check-input" id="remember_me" name="remember">
-            <label class="form-check-label" for="remember_me" style="font-size:0.82rem;">Remember me</label>
+            <label class="form-check-label ui-auth-small" for="remember_me">Remember me</label>
         </div>
         @if (Route::has('password.request'))
-            <a href="{{ route('password.request') }}" style="font-size:0.82rem;color:#d97706;text-decoration:none;font-weight:500;">
+            <a href="{{ route('password.request') }}" class="ui-auth-link ui-auth-small">
                 Forgot password?
             </a>
         @endif
     </div>
 
-    <button type="submit" id="login-btn" class="btn btn-primary w-100 py-2 mb-4" style="font-size:0.9rem;">
+    <button type="submit" id="login-btn" class="btn bg-gradient-primary w-100 py-2 mb-4 ui-auth-btn">
         <i class="bi bi-box-arrow-in-right me-2"></i> Sign In to Dashboard
     </button>
 
-    <div class="text-center" style="font-size:0.82rem;color:#64748b;">
+    <div class="text-center ui-auth-small text-secondary">
         Don't have an account?
-        <a href="{{ route('register') }}" style="color:#d97706;font-weight:600;text-decoration:none;">
+        <a href="{{ route('register') }}" class="ui-auth-link fw-bold">
             Create one free →
         </a>
     </div>
 </form>
+
+<script>
+    document.getElementById('togglePassword').addEventListener('click', function (e) {
+        const password = document.getElementById('password');
+        const icon = this.querySelector('i');
+        if (password.type === 'password') {
+            password.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            password.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    });
+</script>
 @endsection

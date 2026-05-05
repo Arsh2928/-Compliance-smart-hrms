@@ -50,6 +50,13 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (Auth::user()->status === 'pending') {
+            Auth::logout();
+            throw ValidationException::withMessages([
+                'email' => 'Your account is pending HR/Admin approval.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

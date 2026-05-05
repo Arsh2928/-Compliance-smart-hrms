@@ -65,6 +65,21 @@ class DashboardController extends Controller
             ->orderBy('month', 'desc')
             ->get();
 
+        // ── Chart Data (Last 7 Days Attendance) ────────────────────────
+        $chartDates = [];
+        $chartHours = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $dateStr = $date->format('Y-m-d');
+            $chartDates[] = $date->format('M d');
+            
+            $att = \App\Models\Attendance::where('employee_id', $employee->id)
+                ->where('date', $dateStr)
+                ->first();
+            
+            $chartHours[] = $att ? (float) ($att->total_hours ?? 0) : 0;
+        }
+
         return view('employee.dashboard', compact(
             'employee',
             'monthlyHours',
@@ -76,7 +91,9 @@ class DashboardController extends Controller
             'weakestCategory',
             'tierInfo',
             'latestRecord',
-            'rewardHistory'
+            'rewardHistory',
+            'chartDates',
+            'chartHours'
         ));
     }
 }

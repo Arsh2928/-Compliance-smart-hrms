@@ -12,7 +12,7 @@ class Attendance extends Model
     protected $connection = 'mongodb';
     protected $collection = 'attendances';
 
-    protected $fillable = ['employee_id', 'date', 'check_in', 'check_out', 'total_hours'];
+    protected $fillable = ['employee_id', 'date', 'check_in', 'check_out', 'total_hours', 'status'];
 
     public function employee() { return $this->belongsTo(Employee::class); }
 }

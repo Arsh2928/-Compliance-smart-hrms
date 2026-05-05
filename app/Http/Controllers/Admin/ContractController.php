@@ -23,8 +23,19 @@ class ContractController extends Controller
     {
         $request->validate([
             'employee_id'   => 'required',
+            'basic_salary'  => 'required|numeric|min:0',
             'start_date'    => 'required|date',
-            'end_date'      => 'required|date|after:start_date',
+            'end_date'      => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($request) {
+                    $start = \Carbon\Carbon::parse($request->start_date);
+                    $end = \Carbon\Carbon::parse($value);
+                    if ($start->diffInMonths($end) < 6) {
+                        $fail('The contract must be at least 6 months long.');
+                    }
+                },
+            ],
             'document_path' => 'nullable|string',
             'status'        => 'required|in:active,expired,terminated',
         ]);
@@ -39,6 +50,7 @@ class ContractController extends Controller
             'end_date'      => $request->end_date,
             'document_path' => $request->document_path,
             'status'        => $request->status,
+            'basic_salary'  => $request->basic_salary,
         ]);
 
         return redirect()->route('admin.contracts.index')->with('success', 'Contract added successfully.');
@@ -53,12 +65,23 @@ class ContractController extends Controller
     public function update(Request $request, \App\Models\Contract $contract)
     {
         $request->validate([
+            'basic_salary' => 'required|numeric|min:0',
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
+            'end_date'   => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($request) {
+                    $start = \Carbon\Carbon::parse($request->start_date);
+                    $end = \Carbon\Carbon::parse($value);
+                    if ($start->diffInMonths($end) < 6) {
+                        $fail('The contract must be at least 6 months long.');
+                    }
+                },
+            ],
             'status' => 'required|in:active,expired,terminated'
         ]);
 
-        $contract->update($request->only(['start_date', 'end_date', 'status']));
+        $contract->update($request->only(['start_date', 'end_date', 'status', 'basic_salary']));
 
         return redirect()->route('admin.contracts.index')->with('success', 'Contract updated successfully.');
     }

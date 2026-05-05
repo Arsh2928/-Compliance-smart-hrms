@@ -6,7 +6,7 @@
 <p class="auth-subtitle">Set up your compliance workspace access</p>
 
 @if($errors->any())
-    <div class="alert alert-danger mb-3" style="font-size:0.82rem; border-radius:10px; padding:0.7rem 1rem;">
+    <div class="alert alert-danger mb-3 ui-auth-small">
         {{ $errors->first() }}
     </div>
 @endif
@@ -48,20 +48,20 @@
                name="password_confirmation" required placeholder="Re-enter password">
     </div>
 
-    <button type="submit" id="register-btn" class="btn btn-primary w-100 py-2 mb-4" style="font-size:0.9rem;">
+    <button type="submit" id="register-btn" class="btn bg-gradient-primary w-100 py-2 mb-4 ui-auth-btn">
         <i class="bi bi-person-check me-2"></i> Create Account
     </button>
 
-    <div class="text-center" style="font-size:0.82rem;color:#64748b;">
+    <div class="text-center ui-auth-small text-secondary">
         Already have an account?
-        <a href="{{ route('login') }}" style="color:#d97706;font-weight:600;text-decoration:none;">
+        <a href="{{ route('login') }}" class="ui-auth-link fw-bold">
             Sign in →
         </a>
     </div>
 </form>
 
 {{-- Helpful note for pre-created employees --}}
-<div class="mt-3 p-3 rounded" style="background:rgba(250,204,21,0.1);border:1px solid rgba(250,204,21,0.3);font-size:0.78rem;color:#92400e;">
+<div class="mt-3 p-3 rounded ui-auth-note">
     <i class="bi bi-info-circle me-1"></i>
     If your account was created by an admin, use your work email to activate it here.
 </div>

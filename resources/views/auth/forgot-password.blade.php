@@ -1,25 +1,29 @@
-<x-guest-layout>
-    <div class="mb-4 small text-muted">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
-    </div>
+@extends('layouts.guest')
+@section('title', 'Forgot Password — ComplianceSys')
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+@section('content')
+    <h1 class="auth-title">Reset your password</h1>
+    <p class="auth-subtitle">Enter your email and we will send you a password reset link.</p>
+
+    <a href="{{ route('login') }}" class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left"></i> Back to Login
+    </a>
+
+    @if(session('status'))
+        <div class="alert alert-success mb-3">{{ session('status') }}</div>
+    @endif
 
     <form method="POST" action="{{ route('password.email') }}">
         @csrf
 
-        <!-- Email Address -->
         <div class="mb-3">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="w-100" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <label for="email" class="form-label">Email Address</label>
+            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autofocus placeholder="you@company.com">
+            @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
 
-        <div class="d-flex justify-content-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
-        </div>
+        <button type="submit" class="btn bg-gradient-primary w-100 py-2 mt-3 ui-auth-btn">
+            Email Password Reset Link
+        </button>
     </form>
-</x-guest-layout>
+@endsection

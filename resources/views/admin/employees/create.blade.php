@@ -27,12 +27,7 @@
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label fw-bold">Employee Code</label>
-                            <input type="text" name="employee_code" class="form-control @error('employee_code') is-invalid @enderror" value="{{ old('employee_code') }}" required>
-                            @error('employee_code') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold">Department</label>
                             <select name="department_id" class="form-select @error('department_id') is-invalid @enderror" required>
                                 <option value="">Select Department</option>
@@ -42,7 +37,7 @@
                             </select>
                             @error('department_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label fw-bold">System Role</label>
                             <select name="role" class="form-select @error('role') is-invalid @enderror" required>
                                 <option value="employee" {{ old('role') == 'employee' ? 'selected' : '' }}>Employee</option>

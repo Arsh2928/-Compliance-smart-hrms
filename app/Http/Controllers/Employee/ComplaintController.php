@@ -23,13 +23,22 @@ class ComplaintController extends Controller
     {
         // Validation is handled by StoreComplaintRequest
 
-        \App\Models\Complaint::create([
+        $complaint = \App\Models\Complaint::create([
             'user_id' => auth()->id(),
             'title' => $request->title,
             'description' => $request->description,
             'is_anonymous' => $request->has('is_anonymous'),
             'status' => 'pending',
         ]);
+
+        try {
+            $adminEmails = \App\Models\User::where('role', 'admin')->pluck('email')->toArray();
+            if (!empty($adminEmails)) {
+                \Illuminate\Support\Facades\Mail::to($adminEmails)->send(new \App\Mail\NewComplaintMail($complaint));
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send complaint email: ' . $e->getMessage());
+        }
 
         return redirect()->route('employee.complaints.index')->with('success', 'Complaint submitted successfully.');
     }

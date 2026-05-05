@@ -4,14 +4,19 @@
 @section('content')
 <div class="page-header">
     <h4><i class="bi bi-cash-coin me-2 text-success"></i>Payroll Records</h4>
-    <a href="{{ route('admin.payrolls.create') }}" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-2"></i>Generate Payroll
-    </a>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.downloadAll') : route('hr.payrolls.downloadAll') }}" class="btn btn-outline-primary">
+            <i class="bi bi-download me-2"></i>Download All
+        </a>
+        <a href="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.create') : route('hr.payrolls.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-2"></i>Generate Payroll
+        </a>
+    </div>
 </div>
 
 <div class="card shadow-sm mb-4">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table payroll-table">
             <thead>
                 <tr>
                     <th>Employee</th>
@@ -50,19 +55,27 @@
                             <span class="badge bg-warning">Pending</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="payroll-actions-cell">
                         @if($payroll->status === 'pending')
-                        <form action="{{ route('admin.payrolls.update', $payroll) }}" method="POST">
-                            @csrf @method('PUT')
-                            <input type="hidden" name="status" value="paid">
-                            <button type="submit" class="btn btn-sm btn-success">
-                                <i class="bi bi-check-circle me-1"></i>Mark Paid
-                            </button>
-                        </form>
+                        <div class="payroll-row-actions">
+                            <form action="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.update', $payroll) : route('hr.payrolls.update', $payroll) }}" method="POST">
+                                @csrf @method('PUT')
+                                <input type="hidden" name="status" value="paid">
+                                <button type="submit" class="btn btn-sm btn-success" title="Mark Paid">
+                                    <i class="bi bi-check-circle"></i>
+                                </button>
+                            </form>
+                            <a href="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.edit', $payroll) : route('hr.payrolls.edit', $payroll) }}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </div>
                         @else
-                        <button class="btn btn-sm btn-light text-success" disabled>
-                            <i class="bi bi-check-all"></i> Settled
-                        </button>
+                        <div class="payroll-row-actions">
+                            <span class="badge bg-light text-success border border-success payroll-settled-badge"><i class="bi bi-check-all me-1"></i> Settled</span>
+                            <a href="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.download', $payroll) : route('hr.payrolls.download', $payroll) }}" class="btn btn-sm btn-outline-secondary" title="Download Payslip">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </div>
                         @endif
                     </td>
                 </tr>

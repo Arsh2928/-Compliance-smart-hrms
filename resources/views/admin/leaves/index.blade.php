@@ -11,7 +11,7 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table leave-table">
             <thead>
                 <tr>
                     <th>Employee</th>
@@ -39,12 +39,12 @@
                         <i class="bi bi-arrow-right text-muted mx-1"></i>
                         {{ \Carbon\Carbon::parse($leave->end_date)->format('M d, Y') }}
                     </td>
-                    <td style="max-width:180px;">
-                        <span title="{{ $leave->reason }}" style="font-size:0.82rem;">
+                    <td class="table-text-cell">
+                        <span class="table-truncate" title="{{ $leave->reason }}">
                             {{ Str::limit($leave->reason, 35) }}
                         </span>
                     </td>
-                    <td>
+                    <td class="table-status-cell">
                         @if($leave->status === 'approved')
                             <span class="badge bg-success">Approved</span>
                         @elseif($leave->status === 'rejected')
@@ -53,19 +53,19 @@
                             <span class="badge bg-warning">Pending</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="table-actions-cell">
                         @if($leave->status === 'pending')
                         @php
                             $leaveUrl = auth()->user()->role === 'hr'
                                 ? route('hr.leaves.update', $leave)
                                 : route('admin.leaves.update', $leave);
                         @endphp
-                        <div class="d-flex gap-1">
+                        <div class="table-row-actions leave-row-actions">
                             <form action="{{ $leaveUrl }}" method="POST">
                                 @csrf @method('PUT')
                                 <input type="hidden" name="status" value="approved">
-                                <button type="submit" class="btn btn-sm btn-success" title="Approve">
-                                    <i class="bi bi-check-lg"></i> Approve
+                                <button type="submit" class="btn btn-sm btn-success leave-approve-btn" title="Approve">
+                                    <i class="bi bi-check-lg"></i><span>Approve</span>
                                 </button>
                             </form>
                             <form action="{{ $leaveUrl }}" method="POST">

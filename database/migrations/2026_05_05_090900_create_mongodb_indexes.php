@@ -22,8 +22,8 @@ return new class extends Migration
             // Primary leaderboard query: filter by month, sort by rank
             $table->index(['month' => 1, 'rank' => 1]);
 
-            // Per-employee record lookup
-            $table->index(['employee_id' => 1, 'month' => 1]);
+            // Per-employee record lookup (UNIQUE to prevent duplicates)
+            $table->unique(['employee_id' => 1, 'month' => 1]);
 
             // Score sorting within a month (admin dashboard top performers)
             $table->index(['month' => 1, 'final_score' => -1]);

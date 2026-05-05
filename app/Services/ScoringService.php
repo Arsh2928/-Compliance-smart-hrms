@@ -62,21 +62,43 @@ class ScoringService
         $flags = array_merge($flags, $ratingFlags);
 
         // --- TASK COMPLETION ---
-        [$normTask] = $this->computeTask($employee);
+        [$normTask, $taskFlags, $missedDeadlines] = $this->computeTask($employee);
         $components['task'] = round($normTask, 4);
+        $flags = array_merge($flags, $taskFlags);
 
         // --- CONSISTENCY ---
         [$normConsistency, $streakDays] = $this->computeConsistency($employee, $month);
         $components['consistency'] = round($normConsistency, 4);
         $components['streak_days'] = $streakDays;
 
+        // --- PENALTY LOGIC ---
+        // Late logins: Deduct 2 points each
+        // Missed deadlines: Deduct 5 points each
+        $lateLogins        = $employee->late_logins_temp ?? 0;
+        $latePenalties     = $lateLogins * 2;
+        $deadlinePenalties = $missedDeadlines * 5;
+        $totalPenalty      = $latePenalties + $deadlinePenalties;
+
+        if ($latePenalties > 0) $flags[] = "penalty:late_login_{$lateLogins}";
+        if ($deadlinePenalties > 0) $flags[] = "penalty:missed_deadline_{$missedDeadlines}";
+
+        // --- TEAMWORK MULTIPLIER ---
+        // High peer feedback (> 4.0) gives up to 10% bonus
+        $teamworkMultiplier = 1.0;
+        if ($components['rating'] > 0.8) { // > 4.0 out of 5
+            $teamworkMultiplier = 1.05 + (($components['rating'] - 0.8) * 0.25); // max 1.10x
+            $flags[] = "bonus:teamwork_multiplier_active";
+        }
+
         // --- FINAL WEIGHTED SCORE ---
-        $liveScore = (
+        $baseScore = (
             ($components['attendance']  * self::W_ATTENDANCE)  +
             ($components['rating']      * self::W_RATING)      +
             ($components['task']        * self::W_TASK)        +
             ($components['consistency'] * self::W_CONSISTENCY)
         ) * 100;
+
+        $liveScore = max(0, ($baseScore * $teamworkMultiplier) - $totalPenalty);
 
         return [
             'live_score'  => round($liveScore, 2),
@@ -122,6 +144,7 @@ class ScoringService
 
         $verifiedDays    = 0;
         $suspiciousDays  = 0;
+        $lateLogins      = 0;
 
         foreach ($attendances as $record) {
             $hours = (float) ($record->total_hours ?? 0);
@@ -129,6 +152,14 @@ class ScoringService
             if ($hours < self::MIN_HOURS_VALID) {
                 // Under 4 hrs — does not count as verified
                 continue;
+            }
+
+            // Check for late login (after 09:15)
+            if ($record->check_in) {
+                $checkInTime = \Carbon\Carbon::parse($record->date . ' ' . $record->check_in, 'Asia/Kolkata');
+                if ($checkInTime->format('H:i') > '09:15') {
+                    $lateLogins++;
+                }
             }
 
             // Cap per-day contribution
@@ -139,6 +170,8 @@ class ScoringService
         if ($suspiciousDays > 0) {
             $flags[] = "attendance_anomaly:{$suspiciousDays}_days_under_minimum";
         }
+        
+        $employee->setAttribute('late_logins_temp', $lateLogins); // Hacky way to pass back
 
         $normalised = min($verifiedDays / $effectiveExpected, 1.0);
 
@@ -222,9 +255,21 @@ class ScoringService
      */
     private function computeTask(Employee $employee): array
     {
-        $score  = max(0, min(100, (float)($employee->task_completion_score ?? 50)));
+        $score  = max(0, min(100, (float)($employee->task_completion_score ?? 75)));
         $normalised = $score / 100.0;
-        return [$normalised];
+        
+        // Mocking missed deadlines since we don't have a Task model yet
+        // If task score is below 60, we assume 1 missed deadline, below 40 -> 2.
+        $missedDeadlines = 0;
+        if ($score < 60) $missedDeadlines = 1;
+        if ($score < 40) $missedDeadlines = 2;
+        
+        $flags = [];
+        if ($missedDeadlines > 0) {
+            $flags[] = "task:poor_completion_inferred_missed_deadlines";
+        }
+
+        return [$normalised, $flags, $missedDeadlines];
     }
 
     // =========================================================================
@@ -309,31 +354,21 @@ class ScoringService
      */
     public function nextTierInfo(float $liveScore, string $month): array
     {
-        $goldMin   = \App\Models\PerformanceRecord::where('month', $month)
-            ->orderBy('final_score', 'desc')
-            ->take(ceil(\App\Models\PerformanceRecord::where('month', $month)->count() * 0.10))
-            ->min('final_score') ?? 85;
+        $level5Min = 90;
+        $level4Min = 80;
+        $level3Min = 65;
+        $level2Min = 50;
 
-        $silverMin = \App\Models\PerformanceRecord::where('month', $month)
-            ->orderBy('final_score', 'desc')
-            ->skip(ceil(\App\Models\PerformanceRecord::where('month', $month)->count() * 0.10))
-            ->take(ceil(\App\Models\PerformanceRecord::where('month', $month)->count() * 0.20))
-            ->min('final_score') ?? 70;
-
-        $bronzeMin = \App\Models\PerformanceRecord::where('month', $month)
-            ->orderBy('final_score', 'desc')
-            ->skip(ceil(\App\Models\PerformanceRecord::where('month', $month)->count() * 0.30))
-            ->take(ceil(\App\Models\PerformanceRecord::where('month', $month)->count() * 0.30))
-            ->min('final_score') ?? 50;
-
-        if ($liveScore >= $goldMin) {
-            return ['current_tier' => 'Gold', 'next_tier' => null, 'points_needed' => 0];
-        } elseif ($liveScore >= $silverMin) {
-            return ['current_tier' => 'Silver', 'next_tier' => 'Gold', 'points_needed' => round($goldMin - $liveScore, 1)];
-        } elseif ($liveScore >= $bronzeMin) {
-            return ['current_tier' => 'Bronze', 'next_tier' => 'Silver', 'points_needed' => round($silverMin - $liveScore, 1)];
+        if ($liveScore >= $level5Min) {
+            return ['current_tier' => 'Level 5', 'next_tier' => null, 'points_needed' => 0];
+        } elseif ($liveScore >= $level4Min) {
+            return ['current_tier' => 'Level 4', 'next_tier' => 'Level 5', 'points_needed' => round($level5Min - $liveScore, 1)];
+        } elseif ($liveScore >= $level3Min) {
+            return ['current_tier' => 'Level 3', 'next_tier' => 'Level 4', 'points_needed' => round($level4Min - $liveScore, 1)];
+        } elseif ($liveScore >= $level2Min) {
+            return ['current_tier' => 'Level 2', 'next_tier' => 'Level 3', 'points_needed' => round($level3Min - $liveScore, 1)];
         } else {
-            return ['current_tier' => 'None', 'next_tier' => 'Bronze', 'points_needed' => round($bronzeMin - $liveScore, 1)];
+            return ['current_tier' => 'Level 1', 'next_tier' => 'Level 2', 'points_needed' => round($level2Min - $liveScore, 1)];
         }
     }
 }

@@ -78,28 +78,32 @@ class EvaluateMonthlyPerformance extends Command
             return self::FAILURE;
         }
 
-        // ── Tie-breaker sort: score → attendance → rating ──────────────
+        // ── Tie-breaker sort: score → attendance → rating → id ──────────────
         usort($evaluated, function ($a, $b) {
             if ($a['live_score'] !== $b['live_score']) {
-                return $b['live_score'] <=> $a['live_score'];
+                return $b['live_score'] <=> $a['live_score']; // Descending
             }
             if ($a['attendance'] !== $b['attendance']) {
-                return $b['attendance'] <=> $a['attendance'];
+                return $b['attendance'] <=> $a['attendance']; // Descending
             }
-            return $b['rating'] <=> $a['rating'];
+            if ($a['rating'] !== $b['rating']) {
+                return $b['rating'] <=> $a['rating']; // Descending
+            }
+            return strcmp($a['employee']->id, $b['employee']->id); // Ascending ID fallback
         });
 
         $totalEmployees = count($evaluated);
-        $goldLimit      = (int) ceil($totalEmployees * 0.10);
-        $silverLimit    = $goldLimit + (int) ceil($totalEmployees * 0.20);
-        $bronzeLimit    = $silverLimit + (int) ceil($totalEmployees * 0.30);
+        $level5Limit    = (int) ceil($totalEmployees * 0.10); // Top 10%
+        $level4Limit    = $level5Limit + (int) ceil($totalEmployees * 0.20); // Next 20%
+        $level3Limit    = $level4Limit + (int) ceil($totalEmployees * 0.30); // Next 30%
+        $level2Limit    = $level3Limit + (int) ceil($totalEmployees * 0.20); // Next 20%
 
-        $this->info("  Tier cutoffs — Gold: top {$goldLimit}, Silver: next " . ($silverLimit - $goldLimit) . ", Bronze: next " . ($bronzeLimit - $silverLimit));
+        $this->info("  Level Cutoffs — L5: top {$level5Limit}, L4: up to {$level4Limit}, L3: up to {$level3Limit}, L2: up to {$level2Limit}");
 
         // ── Atomic transaction ─────────────────────────────────────────
         try {
             DB::connection('mongodb')->transaction(function () use (
-                $evaluated, $month, $goldLimit, $silverLimit, $bronzeLimit, $totalEmployees, $priorRanks
+                $evaluated, $month, $level5Limit, $level4Limit, $level3Limit, $level2Limit, $totalEmployees, $priorRanks
             ) {
                 foreach ($evaluated as $index => $data) {
                     $employee  = $data['employee'];
@@ -108,65 +112,78 @@ class EvaluateMonthlyPerformance extends Command
 
                     // Rank delta vs previous month
                     $priorRank  = $priorRanks[$employee->id] ?? null;
-                    $rankDelta  = $priorRank ? ($priorRank - $rank) : null; // positive = improved
-                    $scoreDelta = null; // could compute from prior PerformanceRecord
+                    $rankDelta  = $priorRank ? ($priorRank - $rank) : null;
 
-                    $tier  = 'None';
-                    $bonus = 0;
+                    $tier  = 'Level 1';
+                    $bonus = 10;
 
-                    if ($rank <= $goldLimit)        { $tier = 'Gold';   $bonus = 200; }
-                    elseif ($rank <= $silverLimit)  { $tier = 'Silver'; $bonus = 100; }
-                    elseif ($rank <= $bronzeLimit)  { $tier = 'Bronze'; $bonus = 50; }
+                    if ($rank <= $level5Limit)        { $tier = 'Level 5'; $bonus = 200; }
+                    elseif ($rank <= $level4Limit)    { $tier = 'Level 4'; $bonus = 100; }
+                    elseif ($rank <= $level3Limit)    { $tier = 'Level 3'; $bonus = 50; }
+                    elseif ($rank <= $level2Limit)    { $tier = 'Level 2'; $bonus = 25; }
 
-                    // ── Save PerformanceRecord (now with rank, rank_delta) ──
-                    PerformanceRecord::create([
-                        'employee_id'           => $employee->id,
-                        'month'                 => $month,
-                        'live_score'            => $data['live_score'],  // NEW: separate live_score
-                        'final_score'           => $data['live_score'],  // snapshot = live at evaluation time
-                        'attendance_component'  => $data['components']['attendance'] ?? 0,
-                        'rating_component'      => $data['components']['rating']     ?? 0,
-                        'task_component'        => $data['components']['task']       ?? 0,
-                        'consistency_component' => $data['components']['consistency'] ?? 0,
-                        'average_rating'        => ($data['components']['rating_meta']['final_avg'] ?? 0),
-                        'streak_days'           => $data['components']['streak_days'] ?? 0,
-                        'rank'                  => $rank,
-                        'rank_delta'            => $rankDelta,
-                        'percentile'            => $percentile,
-                        'reward_tier'           => $tier,
-                        'flags'                 => $data['flags'],
-                    ]);
+                    // Badges Assignment Logic
+                    $earnedBadges = [];
+                    if ($rank === 1) $earnedBadges[] = 'Top Performer'; // Rank 1 gets Top Performer
+                    if (($data['components']['streak_days'] ?? 0) >= 20) $earnedBadges[] = 'Consistency King';
+                    if (($data['components']['rating_meta']['final_avg'] ?? 0) > 4.5) $earnedBadges[] = 'Team Player';
 
-                    // ── Monthly Reward (top tiers only) ───────────────────
-                    if ($tier !== 'None') {
-                        MonthlyReward::create([
-                            'employee_id'         => $employee->id,
-                            'month'               => $month,
-                            'rank'                => $rank,
+                    // ── Save PerformanceRecord using updateOrCreate ──
+                    PerformanceRecord::updateOrCreate(
+                        [
+                            'employee_id' => $employee->id,
+                            'month'       => $month,
+                        ],
+                        [
+                            'live_score'            => $data['live_score'],
+                            'final_score'           => $data['live_score'],
+                            'attendance_component'  => $data['components']['attendance'] ?? 0,
+                            'rating_component'      => $data['components']['rating']     ?? 0,
+                            'task_component'        => $data['components']['task']       ?? 0,
+                            'consistency_component' => $data['components']['consistency'] ?? 0,
+                            'average_rating'        => ($data['components']['rating_meta']['final_avg'] ?? 0),
+                            'streak_days'           => $data['components']['streak_days'] ?? 0,
+                            'rank'                  => $rank,
+                            'rank_delta'            => $rankDelta,
+                            'percentile'            => $percentile,
+                            'reward_tier'           => $tier,
+                            'flags'                 => $data['flags'],
+                        ]
+                    );
+
+                    // ── Monthly Reward (idempotent) ───────────────────
+                    MonthlyReward::updateOrCreate(
+                        ['employee_id' => $employee->id, 'month' => $month],
+                        [
+                            'rank'                 => $rank,
                             'percentile'          => $percentile,
                             'reward_tier'         => $tier,
-                            'bonus_points_awarded'=> $bonus,
+                            'bonus_points_awarded' => $bonus,
                             'rank_delta'          => $rankDelta,
-                        ]);
+                        ]
+                    );
 
-                        $employee->total_points = ($employee->total_points ?? 0) + $bonus;
-                        $badges = $employee->badges ?? [];
-                        if (!in_array($tier, $badges)) {
-                            $badges[]        = $tier;
-                            $employee->badges = $badges;
+                    $employee->points = ($employee->points ?? 0) + $bonus;
+                    
+                    $currentBadges = $employee->badges ?? [];
+                    $newBadges = [];
+                    foreach ($earnedBadges as $b) {
+                        if (!in_array($b, $currentBadges)) {
+                            $currentBadges[] = $b;
+                            $newBadges[] = $b;
                         }
-
-                        Alert::create([
-                            'user_id'  => $employee->user_id,
-                            'message'  => "🎉 You earned the {$tier} reward for {$month}! Rank #{$rank} · +{$bonus} points.",
-                            'type'     => 'success',
-                            'is_read'  => false,
-                        ]);
                     }
-
-                    // ── Reset monthly attendance points ───────────────────
-                    $employee->attendance_points = 0;
+                    $employee->badges = $currentBadges;
                     $employee->save();
+
+                    $badgeMsg = !empty($newBadges) ? " You also unlocked: " . implode(', ', $newBadges) . "!" : "";
+
+                    Alert::create([
+                        'user_id'  => $employee->user_id,
+                        'message'  => "🎉 You reached {$tier} for {$month}! Rank #{$rank} · +{$bonus} pts.{$badgeMsg}",
+                        'type'     => 'success',
+                        'is_read'  => false,
+                    ]);
                 }
             });
         } catch (\Throwable $e) {

@@ -7,4 +7,14 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('hr:evaluate-monthly-performance')->monthlyOn(1, '00:00');
+Schedule::command('hr:evaluate-monthly-performance')
+    ->monthlyOn(1, '00:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/cron-performance.log'));
+
+Schedule::command('payroll:generate')
+    ->monthlyOn(1, '01:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/cron-payroll.log'));
+
+Schedule::command('hr:check-contracts')->dailyAt('08:00')->withoutOverlapping();

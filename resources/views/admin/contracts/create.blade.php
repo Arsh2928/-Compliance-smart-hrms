@@ -39,14 +39,24 @@
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Status</label>
-                        <select name="status" class="form-select @error('status') is-invalid @enderror" required>
-                            <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Active</option>
-                            <option value="expired" {{ old('status') == 'expired' ? 'selected' : '' }}>Expired</option>
-                            <option value="terminated" {{ old('status') == 'terminated' ? 'selected' : '' }}>Terminated</option>
-                        </select>
-                        @error('status') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Basic Salary (Monthly)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" name="basic_salary" class="form-control @error('basic_salary') is-invalid @enderror" value="{{ old('basic_salary') }}" min="0" required>
+                                @error('basic_salary') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Status</label>
+                            <select name="status" class="form-select @error('status') is-invalid @enderror" required>
+                                <option value="active" {{ old('status') == 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="expired" {{ old('status') == 'expired' ? 'selected' : '' }}>Expired</option>
+                                <option value="terminated" {{ old('status') == 'terminated' ? 'selected' : '' }}>Terminated</option>
+                            </select>
+                            @error('status') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                        </div>
                     </div>
 
                     <div class="d-grid">

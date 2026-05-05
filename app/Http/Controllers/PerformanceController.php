@@ -18,6 +18,40 @@ class PerformanceController extends Controller
     }
 
     /**
+     * Web form: Submit a rating for an employee
+     * POST /admin/employees/{id}/rate  or  /hr/employees/{id}/rate
+     */
+    public function webRating(Request $request, $id)
+    {
+        $request->validate([
+            'categories.work_quality'    => 'required|numeric|min:1|max:5',
+            'categories.punctuality'     => 'required|numeric|min:1|max:5',
+            'categories.teamwork'        => 'required|numeric|min:1|max:5',
+            'categories.task_completion' => 'required|numeric|min:1|max:5',
+            'categories.discipline'      => 'required|numeric|min:1|max:5',
+            'feedback'                   => 'nullable|string|max:1000',
+        ]);
+
+        $employee = Employee::find($id);
+        if (!$employee) {
+            return redirect()->back()->with('error', 'Employee not found.');
+        }
+
+        try {
+            $this->ratingService->submitRating(
+                $employee,
+                $request->input('categories'),
+                auth()->id(),
+                $request->input('feedback')
+            );
+
+            return redirect()->back()->with('success', "Rating submitted for {$employee->user->name}! They've been notified.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
      * API: Submit a rating for an employee
      * POST /api/employees/{id}/rate
      */
@@ -30,9 +64,9 @@ class PerformanceController extends Controller
 
         try {
             $rating = $this->ratingService->submitRating(
-                $employee, 
-                $request->categories, 
-                auth()->id(), 
+                $employee,
+                $request->categories,
+                auth()->id(),
                 $request->feedback
             );
 

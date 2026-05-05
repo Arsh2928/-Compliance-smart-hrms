@@ -52,7 +52,8 @@ class RegisteredUserController extends Controller
                     'password' => Hash::make($request->password),
                 ]);
 
-                Auth::login($existingUser);
+                Auth::guard('web')->login($existingUser);
+                $request->session()->regenerate();
                 return redirect()->route('dashboard');
             }
 
@@ -63,16 +64,29 @@ class RegisteredUserController extends Controller
         }
 
         // Brand new user
+        $otp = random_int(100000, 999999);
         $user = User::create([
             'name'     => $request->name,
             'email'    => strtolower($request->email),
             'password' => Hash::make($request->password),
             'role'     => 'employee',
+            'status'   => 'pending',
+            'otp_code' => $otp,
+            'otp_expires_at' => now()->addMinutes(10),
         ]);
 
-        event(new Registered($user));
-        Auth::login($user);
+        // Send OTP via mail
+        \Illuminate\Support\Facades\Mail::raw("Your OTP is: $otp. It expires in 10 minutes.", function ($message) use ($user) {
+            $message->to($user->email)
+                    ->subject('Verify your email');
+        });
 
-        return redirect()->route('dashboard');
+        event(new Registered($user));
+
+        // Instead of logging in, keep them out or log them in with restricted access?
+        // If we don't log them in, we must pass the email to the OTP page via session.
+        session(['otp_email' => $user->email]);
+
+        return redirect()->route('otp.verify');
     }
 }

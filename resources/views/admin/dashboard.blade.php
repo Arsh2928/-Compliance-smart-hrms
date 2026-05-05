@@ -2,395 +2,334 @@
 @section('title', 'Admin Dashboard')
 
 @section('content')
-<style>
-/* Dashboard Container System */
-.dashboard-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
+@php $role = auth()->user()->role; @endphp
 
-
-
-/* Standard Card System */
-.dashboard-card {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-    border: 1px solid rgba(226, 232, 240, 0.6);
-}
-
-.dashboard-card.h-100 {
-    margin-bottom: 0;
-}
-
-/* Card Header Override */
-.dashboard-card .card-header {
-    background: transparent;
-    border-bottom: none;
-    padding: 0 0 20px 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.dashboard-card .card-body {
-    padding: 0;
-}
-
-/* Stats Grid System */
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-/* Main Content Layout */
-.container-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 20px;
-    align-items: stretch;
-    margin-bottom: 20px;
-}
-
-@media (max-width: 1024px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    .container-row {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Quick Actions Inner Card System */
-.quick-action-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 16px;
-    background: #f8fafc;
-    border-radius: 12px;
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.2s ease;
-    border: 1px solid #f1f5f9;
-}
-
-.quick-action-item:hover {
-    background: #ffffff;
-    border-color: #e2e8f0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-    transform: translateY(-2px);
-}
-
-.quick-action-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.15rem;
-    flex-shrink: 0;
-}
-
-/* Typography & Layout Fixes */
-.welcome-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 0.25rem;
-}
-.welcome-subtitle {
-    color: #64748b;
-    font-size: 0.95rem;
-    margin-bottom: 0;
-}
-.card-title-group {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    color: #0f172a;
-    font-size: 1.05rem;
-}
-</style>
-
-<div class="dashboard-container">
-
-    {{-- Header Card --}}
-    <div class="dashboard-card mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style="padding: 28px 32px;">
+<div class="row">
+  <div class="col-12">
+    <div class="card mb-4">
+      <div class="card-body p-4 p-lg-5 d-flex justify-content-between align-items-start align-items-lg-center flex-column flex-lg-row gap-3">
         <div>
-            <h2 class="welcome-title">
-                Good {{ now()->hour < 12 ? 'Morning' : (now()->hour < 17 ? 'Afternoon' : 'Evening') }},
-                {{ explode(' ', auth()->user()->name)[0] }} 👋
-            </h2>
-            <p class="welcome-subtitle">Here's what's happening with your team today — {{ now()->format('l, d F Y') }}</p>
+          <h4 class="font-weight-bolder mb-1">
+            Good {{ now()->hour < 12 ? 'Morning' : (now()->hour < 17 ? 'Afternoon' : 'Evening') }},
+            {{ explode(' ', auth()->user()->name)[0] }}
+          </h4>
+          <p class="text-sm text-secondary mb-0">Here is what is happening today - {{ now()->format('l, d F Y') }}</p>
         </div>
-        <a href="{{ route('admin.employees.create') }}" class="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-4 py-2" style="background-color: #f59e0b; border-color: #f59e0b; color: #fff; font-weight: 600; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.25);">
-            <i class="bi bi-person-plus-fill"></i>
-            <span>Add Employee</span>
+        <a href="{{ $role === 'hr' ? route('hr.employees.create') : route('admin.employees.create') }}" class="btn bg-gradient-warning mb-0">
+          <i class="bi bi-person-plus-fill me-2"></i>Add Employee
         </a>
+      </div>
     </div>
+  </div>
 
-    {{-- 🔥 Top Performers This Month --}}
-    <h5 class="mb-3" style="font-weight: 800; color: #0f172a;">🔥 Top Performers This Month</h5>
-    <div class="stats-grid mb-4" style="grid-template-columns: repeat(3, 1fr);">
-        @forelse($topPerformers ?? [] as $index => $performer)
-        <div class="dashboard-card h-100 d-flex align-items-center gap-3" style="padding: 16px 20px;">
-            <div class="topbar-avatar flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.2rem; background: {{ $index == 0 ? 'linear-gradient(135deg, #fbbf24, #d97706)' : ($index == 1 ? 'linear-gradient(135deg, #94a3b8, #475569)' : 'linear-gradient(135deg, #d97706, #9a3412)') }}; color: #fff;">
-                {{ substr($performer->user->name ?? 'A', 0, 1) }}
-            </div>
-            <div style="flex-grow: 1;">
-                <div class="fw-bold" style="font-size: 1.05rem; color: #0f172a;">{{ $performer->user->name ?? 'Unknown' }}</div>
-                <div class="text-muted" style="font-size:0.85rem;">Score: <span class="fw-bold" style="color: #f59e0b;">{{ $performer->performance_score ?? 0 }}</span></div>
-            </div>
-            <div class="fs-2">
-                @php $badges = $performer->badges ?? []; $highest = end($badges); @endphp
-                {{ $highest === 'Gold' ? '🥇' : ($highest === 'Silver' ? '🥈' : ($highest === 'Bronze' ? '🥉' : '🚀')) }}
-            </div>
+  <div class="col-12">
+    <h6 class="text-uppercase text-xs font-weight-bolder opacity-7 mb-3">Top Performers This Month</h6>
+  </div>
+  @forelse($topPerformers ?? [] as $index => $performer)
+    @php
+      $badges  = is_array($performer->badges) ? $performer->badges : [];
+      $highest = !empty($badges) ? last($badges) : '';
+      $medal   = $highest === 'Gold' ? 'bi-award-fill' : ($highest === 'Silver' ? 'bi-award' : ($highest === 'Bronze' ? 'bi-award' : 'bi-rocket-takeoff'));
+      $grad    = $index === 0 ? 'bg-gradient-warning' : ($index === 1 ? 'bg-gradient-secondary' : 'bg-gradient-primary');
+    @endphp
+    <div class="col-md-6 col-xl-4 mb-4">
+      <div class="card h-100">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="avatar avatar-lg {{ $grad }} shadow d-flex align-items-center justify-content-center">
+            <span class="text-white font-weight-bolder">{{ substr($performer->user->name ?? 'A', 0, 1) }}</span>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="mb-0">{{ $performer->user->name ?? 'Unknown' }}</h6>
+            <p class="text-sm text-secondary mb-0">Score: <span class="font-weight-bolder text-warning">{{ $performer->performance_score ?? 0 }}</span></p>
+          </div>
+          <div class="text-end">
+            <i class="bi {{ $medal }} fs-4 text-warning"></i>
+          </div>
         </div>
-        @empty
-        <div class="dashboard-card h-100 d-flex align-items-center justify-content-center text-muted" style="grid-column: span 3; padding: 20px;">
-            No top performers ranked yet. Monthly evaluation pending!
-        </div>
-        @endforelse
+      </div>
     </div>
+  @empty
+    <div class="col-12 mb-4">
+      <div class="card">
+        <div class="card-body text-center text-secondary">
+          No top performers ranked yet. Monthly evaluation pending.
+        </div>
+      </div>
+    </div>
+  @endforelse
 
-    {{-- ⚠️ Needs Attention (Low Performers) --}}
-    <h5 class="mb-3 mt-4" style="font-weight: 800; color: #ef4444;">⚠️ Needs Attention</h5>
-    <div class="stats-grid mb-4" style="grid-template-columns: repeat(3, 1fr);">
-        @forelse($lowPerformers ?? [] as $performer)
-        <div class="dashboard-card h-100 d-flex align-items-center gap-3" style="padding: 16px 20px; border-left: 4px solid #ef4444;">
-            <div class="topbar-avatar flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.2rem; background: rgba(239, 68, 68, 0.1); color: #ef4444;">
-                {{ substr($performer->user->name ?? 'A', 0, 1) }}
-            </div>
-            <div style="flex-grow: 1;">
-                <div class="fw-bold" style="font-size: 1.05rem; color: #0f172a;">{{ $performer->user->name ?? 'Unknown' }}</div>
-                <div class="text-danger" style="font-size:0.85rem;">Score: <span class="fw-bold">{{ $performer->performance_score ?? 0 }}</span></div>
+  <div class="col-12">
+    <h6 class="text-uppercase text-xs font-weight-bolder text-danger opacity-8 mb-3">Needs Attention</h6>
+  </div>
+  @forelse($lowPerformers ?? [] as $performer)
+    <div class="col-md-6 col-xl-4 mb-4">
+      <div class="card h-100 border border-danger border-opacity-25">
+        <div class="card-body d-flex align-items-center gap-3">
+          <div class="avatar avatar-lg bg-gradient-danger shadow d-flex align-items-center justify-content-center">
+            <span class="text-white font-weight-bolder">{{ substr($performer->user->name ?? 'A', 0, 1) }}</span>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="mb-0">{{ $performer->user->name ?? 'Unknown' }}</h6>
+            <p class="text-sm mb-0 text-danger">Score: <span class="font-weight-bolder">{{ $performer->performance_score ?? 0 }}</span></p>
+          </div>
+          <a href="{{ auth()->user()->role === 'hr' ? route('hr.employees.show', $performer->id) : route('admin.employees.show', $performer->id) }}" class="btn btn-sm btn-outline-danger mb-0">
+            Review
+          </a>
+        </div>
+      </div>
+    </div>
+  @empty
+    <div class="col-12 mb-4">
+      <div class="card">
+        <div class="card-body text-center text-secondary">
+          <i class="bi bi-check-circle me-1 text-success"></i>All employees are performing well.
+        </div>
+      </div>
+    </div>
+  @endforelse
+
+  <div class="col-12">
+    <h6 class="text-uppercase text-xs font-weight-bolder opacity-7 mb-3">AI Coach Predictions</h6>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <p class="text-xs text-uppercase font-weight-bolder text-primary opacity-8 mb-3">Projected Monthly Winner</p>
+        @if($topPredictor)
+          <div class="d-flex align-items-center gap-3">
+            <div class="avatar avatar-lg bg-gradient-primary shadow d-flex align-items-center justify-content-center">
+              <span class="text-white font-weight-bolder">{{ substr($topPredictor->user->name ?? 'A', 0, 1) }}</span>
             </div>
             <div>
-                <a href="{{ route('admin.employees.show', $performer->id) }}" class="btn btn-sm btn-outline-danger" style="border-radius: 8px;">Review</a>
+              <h6 class="mb-1">{{ $topPredictor->user->name }}</h6>
+              <p class="text-sm text-secondary mb-0">Based on highest live point velocity (+{{ $topPredictor->points }} pts).</p>
             </div>
-        </div>
-        @empty
-        <div class="dashboard-card h-100 d-flex align-items-center justify-content-center text-muted" style="grid-column: span 3; padding: 20px;">
-            <i class="bi bi-check-circle text-success me-2"></i> All employees are performing well. No critical alerts.
-        </div>
-        @endforelse
+          </div>
+        @else
+          <p class="text-secondary mb-0">Not enough data to predict a winner yet.</p>
+        @endif
+      </div>
     </div>
-
-    {{-- Stat Cards Grid --}}
-    <div class="stats-grid">
-        <div class="dashboard-card h-100">
-            <div class="stat-card">
-                <div class="stat-icon yellow"><i class="bi bi-people-fill"></i></div>
-                <div>
-                    <div class="stat-value">{{ $totalEmployees }}</div>
-                    <div class="stat-label">Total Employees</div>
-                    <div class="stat-trend up"><i class="bi bi-arrow-up-short"></i> Active workforce</div>
-                </div>
-            </div>
-        </div>
-        <div class="dashboard-card h-100">
-            <div class="stat-card">
-                <div class="stat-icon success"><i class="bi bi-calendar-check-fill"></i></div>
-                <div>
-                    <div class="stat-value">{{ $attendanceToday }}</div>
-                    <div class="stat-label">Present Today</div>
-                    <div class="stat-trend up"><i class="bi bi-arrow-up-short"></i> Checked in</div>
-                </div>
-            </div>
-        </div>
-        <div class="dashboard-card h-100">
-            <div class="stat-card">
-                <div class="stat-icon warning"><i class="bi bi-hourglass-split"></i></div>
-                <div>
-                    <div class="stat-value">{{ $pendingLeaves }}</div>
-                    <div class="stat-label">Pending Leaves</div>
-                    @if($pendingLeaves > 0)
-                    <div class="stat-trend down"><i class="bi bi-clock"></i> Needs review</div>
-                    @else
-                    <div class="stat-trend up"><i class="bi bi-check2"></i> All clear</div>
-                    @endif
-                </div>
-            </div>
-        </div>
-        <div class="dashboard-card h-100">
-            <div class="stat-card">
-                <div class="stat-icon danger"><i class="bi bi-exclamation-octagon-fill"></i></div>
-                <div>
-                    <div class="stat-value">{{ $openComplaints }}</div>
-                    <div class="stat-label">Open Complaints</div>
-                    @if($openComplaints > 0)
-                    <div class="stat-trend down"><i class="bi bi-exclamation"></i> Unresolved</div>
-                    @else
-                    <div class="stat-trend up"><i class="bi bi-check2-all"></i> All resolved</div>
-                    @endif
-                </div>
-            </div>
-        </div>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <p class="text-xs text-uppercase font-weight-bolder text-danger opacity-8 mb-3">High Burnout Risk</p>
+        @if($burnoutRisks->count() > 0)
+          <div class="d-flex flex-column gap-2">
+            @foreach($burnoutRisks as $risk)
+              <div class="d-flex justify-content-between align-items-center p-2 border-radius-md ui-soft-danger">
+                <div class="font-weight-bolder">{{ $risk->user->name }}</div>
+                <span class="badge bg-gradient-danger">Logged {{ $risk->burnout_hours }} hrs/week</span>
+              </div>
+            @endforeach
+          </div>
+        @else
+          <p class="text-success mb-0"><i class="bi bi-check-circle-fill me-1"></i>No employees are at risk of burnout.</p>
+        @endif
+      </div>
     </div>
+  </div>
 
-    {{-- Main Grid: Chart + Quick Actions --}}
-    <div class="container-row">
-        {{-- Attendance Chart --}}
-        <div>
-            <div class="dashboard-card h-100">
-                <div class="card-header">
-                    <div class="card-title-group">
-                        <div class="stat-icon warning d-flex" style="width:32px;height:32px;border-radius:9px;font-size:0.9rem;">
-                            <i class="bi bi-bar-chart-fill"></i>
-                        </div>
-                        <span>Weekly Attendance Trends</span>
-                    </div>
-                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">Live</span>
-                </div>
-                <div class="card-body">
-                    <canvas id="attendanceChart" height="95"></canvas>
-                </div>
+  <div class="col-xl-3 col-sm-6 mb-4">
+    <div class="card card-stats">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <div class="numbers">
+              <p class="mb-0">Total Employees</p>
+              <h4 class="font-weight-bolder">{{ $totalEmployees }}</h4>
             </div>
-        </div>
-
-        {{-- Quick Actions --}}
-        <div>
-            <div class="dashboard-card h-100">
-                <div class="card-header">
-                    <div class="card-title-group">
-                        <div class="stat-icon yellow d-flex" style="width:32px;height:32px;border-radius:9px;font-size:0.9rem;">
-                            <i class="bi bi-lightning-charge-fill"></i>
-                        </div>
-                        <span>Quick Actions</span>
-                    </div>
-                </div>
-                <div class="card-body d-flex flex-column gap-3">
-                    <a href="{{ route('admin.employees.create') }}" class="quick-action-item">
-                        <div class="quick-action-icon" style="background:rgba(250,204,21,0.15);color:#d97706;">
-                            <i class="bi bi-person-plus-fill"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">Add New Employee</div>
-                            <div style="font-size:0.75rem;color:#64748b;">Onboard a team member</div>
-                        </div>
-                    </a>
-                    <a href="{{ route('admin.leaves.index') }}" class="quick-action-item">
-                        <div class="quick-action-icon" style="background:rgba(245,158,11,0.13);color:#f59e0b;">
-                            <i class="bi bi-calendar2-x"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">Review Leaves</div>
-                            <div style="font-size:0.75rem;color:#64748b;">Approve or reject requests</div>
-                        </div>
-                    </a>
-                    <a href="{{ route('admin.payrolls.create') }}" class="quick-action-item">
-                        <div class="quick-action-icon" style="background:rgba(16,185,129,0.13);color:#10b981;">
-                            <i class="bi bi-cash-coin"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">Generate Payroll</div>
-                            <div style="font-size:0.75rem;color:#64748b;">Process monthly salaries</div>
-                        </div>
-                    </a>
-                    <a href="{{ route('admin.contracts.index') }}" class="quick-action-item">
-                        <div class="quick-action-icon" style="background:rgba(59,130,246,0.13);color:#3b82f6;">
-                            <i class="bi bi-file-earmark-text"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">View Contracts</div>
-                            <div style="font-size:0.75rem;color:#64748b;">Manage employee contracts</div>
-                        </div>
-                    </a>
-                    <a href="{{ route('admin.complaints.index') }}" class="quick-action-item">
-                        <div class="quick-action-icon" style="background:rgba(239,68,68,0.12);color:#ef4444;">
-                            <i class="bi bi-exclamation-octagon"></i>
-                        </div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.875rem;color:#0f172a;">Open Complaints</div>
-                            <div style="font-size:0.75rem;color:#64748b;">Resolve grievances</div>
-                        </div>
-                    </a>
-                </div>
+          </div>
+          <div class="col-auto">
+            <div class="icon icon-shape bg-gradient-warning shadow text-center border-radius-md">
+              <i class="bi bi-people-fill text-white"></i>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-
-    {{-- Compliance Status --}}
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-title-group">
-                <div class="stat-icon teal d-flex" style="width:32px;height:32px;border-radius:9px;font-size:0.9rem;">
-                    <i class="bi bi-shield-check"></i>
-                </div>
-                <span>Compliance Overview</span>
+  </div>
+  <div class="col-xl-3 col-sm-6 mb-4">
+    <div class="card card-stats">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <div class="numbers">
+              <p class="mb-0">Present Today</p>
+              <h4 class="font-weight-bolder">{{ $attendanceToday }}</h4>
             </div>
-            <span class="fs-12 text-muted">Updated just now</span>
-        </div>
-        <div class="card-body">
-            <div class="row g-4">
-                <div class="col-sm-6 col-md-3">
-                    <div class="d-flex flex-column gap-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span style="font-size:0.85rem;font-weight:600;color:#334155;">Attendance Rate</span>
-                            <span style="font-size:0.85rem;font-weight:700;color:#10b981;">
-                                {{ $totalEmployees > 0 ? round(($attendanceToday / $totalEmployees) * 100) : 0 }}%
-                            </span>
-                        </div>
-                        <div class="progress" style="height: 6px; border-radius: 10px;">
-                            <div class="progress-bar" style="width:{{ $totalEmployees > 0 ? round(($attendanceToday / $totalEmployees) * 100) : 0 }}%; background:linear-gradient(90deg,#10b981,#34d399); border-radius: 10px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="d-flex flex-column gap-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span style="font-size:0.85rem;font-weight:600;color:#334155;">Leave Approval</span>
-                            <span style="font-size:0.85rem;font-weight:700;color:#f59e0b;">
-                                {{ $pendingLeaves > 0 ? 'Pending' : '100%' }}
-                            </span>
-                        </div>
-                        <div class="progress" style="height: 6px; border-radius: 10px;">
-                            <div class="progress-bar" style="width:{{ $pendingLeaves > 0 ? 60 : 100 }}%; background:linear-gradient(90deg,#facc15,#f59e0b); border-radius: 10px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="d-flex flex-column gap-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span style="font-size:0.85rem;font-weight:600;color:#334155;">Complaint Resolution</span>
-                            <span style="font-size:0.85rem;font-weight:700;color:#ef4444;">
-                                {{ $openComplaints > 0 ? $openComplaints.' Open' : '100%' }}
-                            </span>
-                        </div>
-                        <div class="progress" style="height: 6px; border-radius: 10px;">
-                            <div class="progress-bar" style="width:{{ $openComplaints > 0 ? 40 : 100 }}%; background:linear-gradient(90deg,#ef4444,#f87171); border-radius: 10px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="d-flex flex-column gap-2">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span style="font-size:0.85rem;font-weight:600;color:#334155;">Overall Score</span>
-                            <span style="font-size:0.85rem;font-weight:700;color:#6366f1;">87%</span>
-                        </div>
-                        <div class="progress" style="height: 6px; border-radius: 10px;">
-                            <div class="progress-bar" style="width:87%; background:linear-gradient(90deg,#6366f1,#a855f7); border-radius: 10px;"></div>
-                        </div>
-                    </div>
-                </div>
+          </div>
+          <div class="col-auto">
+            <div class="icon icon-shape bg-gradient-success shadow text-center border-radius-md">
+              <i class="bi bi-calendar-check-fill text-white"></i>
             </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
+  <div class="col-xl-3 col-sm-6 mb-4">
+    <div class="card card-stats">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <div class="numbers">
+              <p class="mb-0">Pending Leaves</p>
+              <h4 class="font-weight-bolder">{{ $pendingLeaves }}</h4>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="icon icon-shape bg-gradient-info shadow text-center border-radius-md">
+              <i class="bi bi-hourglass-split text-white"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-sm-6 mb-4">
+    <div class="card card-stats">
+      <div class="card-body">
+        <div class="row">
+          <div class="col">
+            <div class="numbers">
+              <p class="mb-0">Open Complaints</p>
+              <h4 class="font-weight-bolder">{{ $openComplaints }}</h4>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="icon icon-shape bg-gradient-danger shadow text-center border-radius-md">
+              <i class="bi bi-exclamation-octagon-fill text-white"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
+  <div class="col-lg-4 mb-4">
+    <div class="card h-100">
+      <div class="card-header pb-0">
+        <h6 class="mb-0">Quick Actions</h6>
+      </div>
+      <div class="card-body pt-3 d-flex flex-column gap-2">
+        <a href="{{ $role === 'hr' ? route('hr.employees.create') : route('admin.employees.create') }}" class="quick-action-item">
+          <div class="quick-action-icon bg-gradient-warning text-white"><i class="bi bi-person-plus-fill"></i></div>
+          <div>
+            <div class="text-sm font-weight-bolder">Add New Employee</div>
+            <div class="text-xs text-secondary">Onboard a team member</div>
+          </div>
+        </a>
+        <a href="{{ $role === 'hr' ? route('hr.leaves.index') : route('admin.leaves.index') }}" class="quick-action-item">
+          <div class="quick-action-icon bg-gradient-info text-white"><i class="bi bi-calendar2-x"></i></div>
+          <div>
+            <div class="text-sm font-weight-bolder">Review Leaves</div>
+            <div class="text-xs text-secondary">Approve or reject requests</div>
+          </div>
+        </a>
+        <a href="{{ $role === 'hr' ? route('hr.payrolls.create') : route('admin.payrolls.create') }}" class="quick-action-item">
+          <div class="quick-action-icon bg-gradient-success text-white"><i class="bi bi-cash-coin"></i></div>
+          <div>
+            <div class="text-sm font-weight-bolder">Generate Payroll</div>
+            <div class="text-xs text-secondary">Process monthly salaries</div>
+          </div>
+        </a>
+        <a href="{{ $role === 'hr' ? route('hr.contracts.index') : route('admin.contracts.index') }}" class="quick-action-item">
+          <div class="quick-action-icon bg-gradient-primary text-white"><i class="bi bi-file-earmark-text"></i></div>
+          <div>
+            <div class="text-sm font-weight-bolder">View Contracts</div>
+            <div class="text-xs text-secondary">Manage employee contracts</div>
+          </div>
+        </a>
+        <a href="{{ $role === 'hr' ? route('hr.complaints.index') : route('admin.complaints.index') }}" class="quick-action-item">
+          <div class="quick-action-icon bg-gradient-danger text-white"><i class="bi bi-exclamation-octagon"></i></div>
+          <div>
+            <div class="text-sm font-weight-bolder">Open Complaints</div>
+            <div class="text-xs text-secondary">Resolve grievances</div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8 mb-4">
+    <div class="card h-100">
+      <div class="card-header pb-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Compliance Overview</h6>
+        <span class="text-xs text-secondary">Updated just now</span>
+      </div>
+      <div class="card-body pt-3">
+        @php
+          $attendancePct = $totalEmployees > 0 ? round(($attendanceToday / $totalEmployees) * 100) : 0;
+          $leavePct = $pendingLeaves > 0 ? 60 : 100;
+          $complaintsPct = $openComplaints > 0 ? 40 : 100;
+          $complianceMetrics = [
+            ['label' => 'Attendance Rate', 'value' => $attendancePct.'%', 'fill' => $attendancePct, 'tone' => 'success', 'accent' => '#22c55e', 'icon' => 'bi-calendar-check-fill'],
+            ['label' => 'Leave Approval', 'value' => $pendingLeaves > 0 ? 'Pending' : '100%', 'fill' => $leavePct, 'tone' => 'warning', 'accent' => '#4f46e5', 'icon' => 'bi-calendar2-x-fill'],
+            ['label' => 'Complaints', 'value' => $openComplaints > 0 ? $openComplaints.' Open' : '100%', 'fill' => $complaintsPct, 'tone' => 'danger', 'accent' => '#ef4444', 'icon' => 'bi-exclamation-octagon-fill'],
+            ['label' => 'Overall', 'value' => '87%', 'fill' => 87, 'tone' => 'primary', 'accent' => '#4f46e5', 'icon' => 'bi-shield-check'],
+          ];
+        @endphp
+        <div class="compliance-stack">
+          @foreach($complianceMetrics as $metric)
+          <div class="compliance-box compliance-box-{{ $metric['tone'] }}" style="--fill: {{ $metric['fill'] }}%; --accent: {{ $metric['accent'] }};">
+            <div class="compliance-fill"></div>
+            <div class="compliance-content">
+              <div class="compliance-icon">
+                <i class="bi {{ $metric['icon'] }}"></i>
+              </div>
+              <div class="compliance-copy">
+                <span class="compliance-label">{{ $metric['label'] }}</span>
+                <span class="compliance-caption">{{ $metric['fill'] }}% target coverage</span>
+              </div>
+              <span class="compliance-value">{{ $metric['value'] }}</span>
+            </div>
+          </div>
+          @endforeach
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {{-- Charts moved to the bottom --}}
+  <div class="col-12 mb-4">
+    <div class="card">
+      <div class="card-header pb-0 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Weekly Attendance Trends</h6>
+        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Live</span>
+      </div>
+      <div class="card-body">
+        <div class="ui-chart ui-chart-lg">
+          <canvas id="attendanceChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header pb-0">
+        <h6 class="mb-0">Performance Trends</h6>
+      </div>
+      <div class="card-body">
+        <div class="ui-chart ui-chart-md">
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header pb-0">
+        <h6 class="mb-0">Reward Distribution</h6>
+      </div>
+      <div class="card-body">
+        <div class="ui-chart ui-chart-md">
+          <canvas id="rewardChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 @endsection
@@ -402,12 +341,12 @@ if (ctx) {
     // Create gradient fills
     const canvas = ctx;
     const gradGreen = canvas.getContext('2d').createLinearGradient(0, 0, 0, 300);
-    gradGreen.addColorStop(0, 'rgba(250,204,21,0.35)');
-    gradGreen.addColorStop(1, 'rgba(250,204,21,0.0)');
+    gradGreen.addColorStop(0, 'rgba(34,197,94,0.26)');
+    gradGreen.addColorStop(1, 'rgba(34,197,94,0.0)');
 
     const gradOrange = canvas.getContext('2d').createLinearGradient(0, 0, 0, 300);
-    gradOrange.addColorStop(0, 'rgba(239,68,68,0.25)');
-    gradOrange.addColorStop(1, 'rgba(239,68,68,0.0)');
+    gradOrange.addColorStop(0, 'rgba(79,70,229,0.18)');
+    gradOrange.addColorStop(1, 'rgba(79,70,229,0.0)');
 
     new Chart(canvas, {
         type: 'line',
@@ -418,9 +357,9 @@ if (ctx) {
                     label: 'Employees Present',
                     data: {!! json_encode($chartData) !!},
                     backgroundColor: gradGreen,
-                    borderColor: '#f59e0b',
+                    borderColor: '#22c55e',
                     borderWidth: 2.5,
-                    pointBackgroundColor: '#f59e0b',
+                    pointBackgroundColor: '#22c55e',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointRadius: 5,
@@ -432,10 +371,10 @@ if (ctx) {
                     label: 'Leave Requests',
                     data: {!! json_encode($chartLeaves) !!},
                     backgroundColor: gradOrange,
-                    borderColor: '#ef4444',
+                    borderColor: '#4f46e5',
                     borderWidth: 2,
                     borderDash: [5, 4],
-                    pointBackgroundColor: '#ef4444',
+                    pointBackgroundColor: '#4f46e5',
                     pointBorderColor: '#fff',
                     pointBorderWidth: 2,
                     pointRadius: 4,
@@ -447,6 +386,7 @@ if (ctx) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: {
                 mode: 'index',
                 intersect: false,
@@ -468,9 +408,9 @@ if (ctx) {
                 },
                 tooltip: {
                     backgroundColor: '#1e293b',
-                    titleColor: '#facc15',
+                    titleColor: '#c7d2fe',
                     bodyColor: '#e2e8f0',
-                    borderColor: 'rgba(250,204,21,0.3)',
+                    borderColor: 'rgba(79,70,229,0.28)',
                     borderWidth: 1,
                     padding: 12,
                     cornerRadius: 10,
@@ -501,6 +441,76 @@ if (ctx) {
         }
     });
 }
+
+const perfCtx = document.getElementById('performanceChart');
+if (perfCtx) {
+    const canvas = perfCtx;
+    const gradPurple = canvas.getContext('2d').createLinearGradient(0, 0, 0, 300);
+    gradPurple.addColorStop(0, 'rgba(79, 70, 229, 0.28)');
+    gradPurple.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Average Score',
+                data: [72, 78, 81, 86],
+                backgroundColor: gradPurple,
+                borderColor: '#4f46e5',
+                borderWidth: 2,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { color: '#94a3b8', font: { size: 11 } },
+                    grid: { color: 'rgba(241,245,249,0.8)' },
+                    border: { display: false }
+                },
+                x: {
+                    ticks: { color: '#94a3b8', font: { size: 11 } },
+                    grid: { display: false },
+                    border: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+const rewardCtx = document.getElementById('rewardChart');
+if (rewardCtx) {
+    new Chart(rewardCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'],
+            datasets: [{
+                data: [10, 20, 30, 20, 20],
+                backgroundColor: ['#4f46e5', '#22c55e', '#0ea5e9', '#f59e0b', '#ef4444'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { color: '#64748b', font: { size: 10 } }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+}
 </script>
 @endpush
-

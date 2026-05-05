@@ -29,7 +29,9 @@ class EmployeeController extends Controller
 
         $employees   = $query->paginate(10);
         $departments = Department::all();
-        return view('admin.employees.index', compact('employees', 'departments'));
+        $pendingUsers = User::where('status', 'pending')->get();
+
+        return view('admin.employees.index', compact('employees', 'departments', 'pendingUsers'));
     }
 
     public function create()
@@ -44,19 +46,19 @@ class EmployeeController extends Controller
             'name'          => 'required|string|max:255',
             'email'         => 'required|email|max:255',
             'department_id' => 'required',
-            'employee_code' => 'required|string|max:50',
             'phone'         => 'nullable|string|max:20',
             'address'       => 'nullable|string',
             'joined_date'   => 'required|date',
             'role'          => 'required|in:employee,hr,admin',
         ]);
 
-        // Manual uniqueness checks (MongoDB doesn't support unique: rule)
         if (User::where('email', $request->email)->exists()) {
             return back()->withErrors(['email' => 'Email already in use.'])->withInput();
         }
-        if (Employee::where('employee_code', $request->employee_code)->exists()) {
-            return back()->withErrors(['employee_code' => 'Employee code already taken.'])->withInput();
+
+        $employeeCode = 'EMP-' . strtoupper(substr(uniqid(), -6));
+        while (Employee::where('employee_code', $employeeCode)->exists()) {
+            $employeeCode = 'EMP-' . strtoupper(substr(uniqid(), -6));
         }
 
         $user = User::create([
@@ -64,12 +66,13 @@ class EmployeeController extends Controller
             'email'    => $request->email,
             'password' => bcrypt('password123'),
             'role'     => $request->role,
+            'status'   => 'approved',
         ]);
 
         Employee::create([
             'user_id'       => $user->id,
             'department_id' => $request->department_id,
-            'employee_code' => $request->employee_code,
+            'employee_code' => $employeeCode,
             'phone'         => $request->phone,
             'address'       => $request->address,
             'joined_date'   => $request->joined_date,
@@ -81,7 +84,7 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee)
     {
-        $employee->load('user', 'department', 'leaves', 'attendances', 'contracts', 'payrolls');
+        $employee->load('user.complaints', 'department', 'leaves', 'attendances', 'contracts', 'payrolls', 'performanceRecords', 'ratings.evaluator');
         return view('admin.employees.show', compact('employee'));
     }
 
@@ -130,5 +133,40 @@ class EmployeeController extends Controller
 
         return redirect()->route('admin.employees.index')
             ->with('success', 'Employee removed successfully.');
+    }
+
+    public function approveUser(Request $request, User $user)
+    {
+        $request->validate([
+            'department_id' => 'required',
+        ]);
+
+        $employeeCode = 'EMP-' . strtoupper(substr(uniqid(), -6));
+        while (Employee::where('employee_code', $employeeCode)->exists()) {
+            $employeeCode = 'EMP-' . strtoupper(substr(uniqid(), -6));
+        }
+
+        $user->update(['status' => 'approved']);
+
+        Employee::create([
+            'user_id' => $user->id,
+            'department_id' => $request->department_id,
+            'employee_code' => $employeeCode,
+            'joined_date' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'User approved and employee record created.');
+    }
+
+    public function rejectUser(User $user)
+    {
+        if ($user->status !== 'pending') {
+            return redirect()->back()->with('error', 'User is not in pending status.');
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        return redirect()->back()->with('success', "Registration for {$name} has been rejected and removed.");
     }
 }

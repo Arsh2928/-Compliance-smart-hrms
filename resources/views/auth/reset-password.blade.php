@@ -1,39 +1,67 @@
-<x-guest-layout>
+@extends('layouts.guest')
+@section('title', 'Reset Password — ComplianceSys')
+
+@section('content')
+    <h1 class="auth-title">Reset Password</h1>
+    <p class="auth-subtitle">Choose a new password for your account.</p>
+
+    <a href="{{ route('login') }}" class="btn btn-sm btn-outline-secondary mb-3">
+        <i class="bi bi-arrow-left"></i> Back to Login
+    </a>
+
     <form method="POST" action="{{ route('password.store') }}">
         @csrf
 
-        <!-- Password Reset Token -->
         <input type="hidden" name="token" value="{{ $request->route('token') }}">
 
-        <!-- Email Address -->
         <div class="mb-3">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="w-100" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <label for="email" class="form-label">Email Address</label>
+            <input id="email" type="email" class="form-control @error('email') is-invalid @enderror" name="email" value="{{ old('email', $request->email) }}" required autofocus autocomplete="username" placeholder="you@company.com">
+            @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
         </div>
 
-        <!-- Password -->
         <div class="mb-3">
-            <x-input-label for="password" :value="__('Password')" />
-            <x-text-input id="password" class="w-100" type="password" name="password" required autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+            <label for="password" class="form-label">New Password</label>
+            <div class="input-group">
+                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="new-password" placeholder="Min. 8 characters">
+                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password">
+                    <i class="bi bi-eye"></i>
+                </button>
+                @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
         </div>
 
-        <!-- Confirm Password -->
         <div class="mb-3">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="w-100"
-                                type="password"
-                                name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
+            <label for="password_confirmation" class="form-label">Confirm Password</label>
+            <div class="input-group">
+                <input id="password_confirmation" type="password" class="form-control" name="password_confirmation" required autocomplete="new-password" placeholder="Re-enter password">
+                <button class="btn btn-outline-secondary toggle-password" type="button" data-target="password_confirmation">
+                    <i class="bi bi-eye"></i>
+                </button>
+            </div>
         </div>
 
-        <div class="d-flex justify-content-end mt-4">
-            <x-primary-button>
-                {{ __('Reset Password') }}
-            </x-primary-button>
-        </div>
+        <button type="submit" class="btn bg-gradient-primary w-100 py-2 mt-3 ui-auth-btn">
+            Reset Password
+        </button>
     </form>
-</x-guest-layout>
+
+<script>
+    document.querySelectorAll('.toggle-password').forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            const icon = this.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        });
+    });
+</script>
+@endsection

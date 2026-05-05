@@ -11,7 +11,7 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table contracts-table">
             <thead>
                 <tr>
                     <th>Employee</th>
@@ -40,7 +40,7 @@
                             <span class="badge bg-danger ms-1">Expiring Soon</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="table-status-cell">
                         @if($contract->status === 'active')
                             <span class="badge bg-success">Active</span>
                         @elseif($contract->status === 'expired')
@@ -49,7 +49,7 @@
                             <span class="badge bg-secondary">Terminated</span>
                         @endif
                     </td>
-                    <td>
+                    <td class="contract-actions-cell">
                         <a href="{{ route('admin.contracts.edit', $contract) }}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-pencil-fill me-1"></i>Edit
                         </a>

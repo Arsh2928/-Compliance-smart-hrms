@@ -6,25 +6,31 @@
 {{-- Welcome Banner --}}
 <div class="welcome-banner mb-4">
     <div>
-        <h2 class="welcome-title">
-            Hey, {{ explode(' ', auth()->user()->name)[0] }} 👋
-        </h2>
-        <p class="welcome-subtitle">
-            {{ now()->format('l, d F Y') }} · Track your attendance, leaves and payslips below.
-        </p>
+        <h3 class="welcome-title">Welcome back, {{ explode(' ', $employee->user->name)[0] }}! 👋</h3>
+        <p class="welcome-subtitle">{{ $employee->designation }} | {{ $employee->department->name ?? 'No Department' }}</p>
+        @if(!empty($employee->badges))
+            <div class="mt-2 d-flex gap-2 flex-wrap">
+                @foreach($employee->badges as $badge)
+                    <span class="badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i> {{ $badge }}</span>
+                @endforeach
+            </div>
+        @endif
     </div>
-    <a href="{{ route('employee.leaves.create') }}" class="btn btn-primary d-flex align-items-center gap-2" style="white-space:nowrap;">
-        <i class="bi bi-calendar-plus-fill"></i>
-        <span>Apply Leave</span>
-    </a>
+    <div class="d-none d-md-flex align-items-center gap-3">
+        <a href="{{ route('employee.leaves.create') }}" class="btn btn-outline-primary shadow-sm">Request Leave</a>
+        <form action="{{ route('employee.attendance.checkin') }}" method="POST">
+            @csrf
+            <button class="btn btn-primary shadow-sm"><i class="bi bi-fingerprint me-1"></i> Check In</button>
+        </form>
+    </div>
 </div>
 
 {{-- Performance & Rating --}}
 @if(isset($employee))
 @php
     $badges  = $employee->badges ?? [];
-    $highest = collect(['Gold','Silver','Bronze'])->first(fn($t) => in_array($t, $badges));
-    $tierEmoji = $highest === 'Gold' ? '🥇' : ($highest === 'Silver' ? '🥈' : ($highest === 'Bronze' ? '🥉' : '🚀'));
+    $highest = collect(['Level 5','Level 4','Level 3','Level 2','Level 1'])->first(fn($t) => in_array($t, $badges));
+    $tierEmoji = $highest === 'Level 5' ? '🥇' : ($highest === 'Level 4' ? '🥈' : ($highest === 'Level 3' ? '🥉' : '🚀'));
 @endphp
 
 {{-- Row 1: Live Score + Tier Progression --}}
@@ -335,11 +341,12 @@
     </div>
 </div>
 
-{{-- Reward History --}}
-<div class="row mt-4 mb-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
+{{-- Bottom Area: Attendance Chart & Reward History --}}
+<div class="row mt-4 mb-4 g-3 employee-dashboard-bottom">
+    {{-- Reward History --}}
+    <div class="col-lg-6">
+        <div class="card employee-bottom-card">
+            <div class="card-header bg-white">
                 <div class="card-title-group">
                     <div class="stat-icon purple d-flex" style="width:32px;height:32px;border-radius:9px;font-size:0.9rem;">
                         <i class="bi bi-award-fill"></i>
@@ -350,23 +357,21 @@
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table mb-0">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
                                 <th>Month</th>
                                 <th>Rank</th>
-                                <th>Percentile</th>
-                                <th>Tier</th>
-                                <th>Bonus Points</th>
+                                <th>Level</th>
+                                <th>Bonus</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($rewardHistory as $reward)
                             <tr>
-                                <td><span class="fw-bold">{{ DateTime::createFromFormat('Y-m', $reward->month)->format('F Y') }}</span></td>
+                                <td><span class="fw-bold">{{ DateTime::createFromFormat('Y-m', $reward->month)->format('M Y') }}</span></td>
                                 <td>#{{ $reward->rank }}</td>
-                                <td>Top {{ $reward->percentile }}%</td>
                                 <td>
-                                    <span class="badge bg-{{ $reward->reward_tier === 'Gold' ? 'warning' : ($reward->reward_tier === 'Silver' ? 'secondary' : 'danger') }}">
+                                    <span class="badge bg-{{ $reward->reward_tier === 'Level 5' ? 'warning' : ($reward->reward_tier === 'Level 4' ? 'primary' : 'secondary') }}">
                                         {{ $reward->reward_tier }}
                                     </span>
                                 </td>
@@ -374,10 +379,10 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5">
-                                    <div class="empty-state">
-                                        <i class="bi bi-star"></i>
-                                        <p>You haven't earned any monthly rewards yet. Keep up the good work!</p>
+                                <td colspan="4">
+                                    <div class="empty-state p-4 text-center">
+                                        <i class="bi bi-star text-muted" style="font-size: 2rem;"></i>
+                                        <p class="mt-2 mb-0">No rewards yet. Keep it up!</p>
                                     </div>
                                 </td>
                             </tr>
@@ -388,6 +393,64 @@
             </div>
         </div>
     </div>
+
+    {{-- Attendance Chart (Moved to Base as Requested) --}}
+    <div class="col-lg-6">
+        <div class="card employee-bottom-card">
+            <div class="card-header bg-white">
+                <div class="card-title-group">
+                    <div class="stat-icon yellow d-flex" style="width:32px;height:32px;border-radius:9px;font-size:0.9rem;">
+                        <i class="bi bi-bar-chart-fill"></i>
+                    </div>
+                    <span>Weekly Hours Logged</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="employee-hours-chart">
+                    <canvas id="attendanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('attendanceChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($chartDates ?? []) !!},
+                datasets: [{
+                    label: 'Hours Logged',
+                    data: {!! json_encode($chartHours ?? []) !!},
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: 'rgb(59, 130, 246)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 12,
+                        ticks: { stepSize: 2 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+});
+</script>
+@endpush

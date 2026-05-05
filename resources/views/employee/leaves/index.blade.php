@@ -11,7 +11,7 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table">
+        <table class="table leave-table">
             <thead>
                 <tr>
                     <th>Type</th>
@@ -30,10 +30,12 @@
                         <i class="bi bi-arrow-right text-muted mx-1"></i>
                         {{ \Carbon\Carbon::parse($leave->end_date)->format('M d, Y') }}
                     </td>
-                    <td style="max-width:200px; font-size:0.82rem;">
-                        {{ Str::limit($leave->reason, 45) }}
+                    <td class="table-text-cell">
+                        <span class="table-truncate" title="{{ $leave->reason }}">
+                            {{ Str::limit($leave->reason, 45) }}
+                        </span>
                     </td>
-                    <td>
+                    <td class="table-status-cell">
                         @if($leave->status === 'approved')
                             <span class="badge bg-success">Approved</span>
                         @elseif($leave->status === 'rejected')

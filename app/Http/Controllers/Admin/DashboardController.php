@@ -13,7 +13,7 @@ class DashboardController extends Controller
         $todayStr         = today()->format('Y-m-d');
         $attendanceToday  = \App\Models\Attendance::where('date', $todayStr)->count();
         $pendingLeaves    = \App\Models\Leave::where('status', 'pending')->count();
-        $openComplaints   = \App\Models\Complaint::where('status', 'pending')->count();
+        $openComplaints   = \App\Models\Complaint::whereIn('status', ['open', 'pending'])->count();
         $complianceAlerts = \App\Models\Alert::where('is_read', false)->count();
 
         $employeeUserIds = \App\Models\User::where('role', 'employee')->pluck('id');
@@ -40,7 +40,7 @@ class DashboardController extends Controller
         // LOW PERFORMERS: Single Source of Truth
         $lowRecords = \App\Models\PerformanceRecord::with('employee.user')
             ->where('month', $month)
-            ->where('final_score', '<', 100) // normalized score threshold
+            ->where('final_score', '<', 50) // Actual low performers only
             ->whereHas('employee', function($q) use ($employeeUserIds) {
                 $q->whereIn('user_id', $employeeUserIds);
             })
@@ -53,6 +53,40 @@ class DashboardController extends Controller
             $emp->performance_score = $record->final_score;
             return $emp;
         });
+
+        // ==========================================
+        // AI SYSTEM (SECTION 11) - PREDICTIONS
+        // ==========================================
+        $burnoutRisks = collect();
+        $topPredictor = null;
+
+        // Predict Top Performer (highest live score velocity this month)
+        $topPredictor = \App\Models\Employee::whereIn('user_id', $employeeUserIds)
+            ->where('points', '>', 0)
+            ->orderBy('points', 'desc')
+            ->first();
+
+        // Burnout Risk: Employees logging more than 50 hours in the last 7 days
+        $sevenDaysAgo = today()->subDays(7)->format('Y-m-d');
+        $recentAttendances = \App\Models\Attendance::where('date', '>=', $sevenDaysAgo)->get();
+        
+        $highHoursEmployees = $recentAttendances->groupBy('employee_id')->map(function($group) {
+            return (object) [
+                'employee_id' => $group->first()->employee_id,
+                'weekly_hours' => $group->sum('total_hours')
+            ];
+        })->values();
+
+        foreach ($highHoursEmployees as $record) {
+            if ($record->weekly_hours >= 50) {
+                $emp = \App\Models\Employee::with('user')->find($record->employee_id);
+                if ($emp) {
+                    $emp->burnout_hours = $record->weekly_hours;
+                    $burnoutRisks->push($emp);
+                }
+            }
+        }
+        $burnoutRisks = $burnoutRisks->take(3); // Show top 3 at risk
 
         // Chart Data: Last 7 days attendance + leave submissions
         $chartDates  = [];
@@ -71,7 +105,8 @@ class DashboardController extends Controller
 
         return view('admin.dashboard', compact(
             'totalEmployees', 'attendanceToday', 'pendingLeaves',
-            'openComplaints', 'complianceAlerts', 'chartDates', 'chartData', 'chartLeaves', 'topPerformers', 'lowPerformers'
+            'openComplaints', 'complianceAlerts', 'chartDates', 'chartData', 'chartLeaves', 'topPerformers', 'lowPerformers',
+            'topPredictor', 'burnoutRisks'
         ));
     }
 

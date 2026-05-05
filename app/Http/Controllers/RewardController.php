@@ -54,7 +54,7 @@ class RewardController extends Controller
         $page     = $request->get('page', 1);
 
         // Top 3 cached separately (never paginated)
-        $topThree = Cache::remember("{$cacheKey}:top3", 86400, function () use ($month, $empIdFilter) {
+        $topThree = Cache::remember("{$cacheKey}:top3", 300, function () use ($month, $empIdFilter) {
             $query = PerformanceRecord::with('employee.user', 'employee.department')
                 ->where('month', $month)
                 ->orderBy('rank', 'asc')
@@ -68,7 +68,7 @@ class RewardController extends Controller
         });
 
         // ── Main paginated leaderboard ─────────────────────────────────
-        $leaderboard = Cache::remember("{$cacheKey}:page:{$page}", 86400, function () use ($month, $empIdFilter, $request) {
+        $leaderboard = Cache::remember("{$cacheKey}:page:{$page}", 300, function () use ($month, $empIdFilter, $request) {
             $query = PerformanceRecord::with('employee.user', 'employee.department')
                 ->where('month', $month)
                 ->orderBy('rank', 'asc');
@@ -152,11 +152,11 @@ class RewardController extends Controller
             return back()->with('error', 'Only employees can redeem rewards.');
         }
 
-        if (($employee->total_points ?? 0) < $request->cost) {
-            return back()->with('error', "Insufficient points. You have " . ($employee->total_points ?? 0) . " pts, need {$request->cost}.");
+        if (($employee->points ?? 0) < $request->cost) {
+            return back()->with('error', "Insufficient points. You have " . ($employee->points ?? 0) . " pts, need {$request->cost}.");
         }
 
-        $employee->total_points -= (int) $request->cost;
+        $employee->points -= (int) $request->cost;
         $employee->save();
 
         return back()->with('success', 'Reward redeemed! Your manager will follow up shortly.');

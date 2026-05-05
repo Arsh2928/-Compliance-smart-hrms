@@ -12,8 +12,9 @@ class AttendanceController extends Controller
         $employee = auth()->user()->employee;
         if (!$employee) return back()->with('error', 'Employee record not found.');
 
+        $todayStr = today()->format('Y-m-d');
         $attendance = \App\Models\Attendance::firstOrCreate(
-            ['employee_id' => $employee->id, 'date' => today()],
+            ['employee_id' => $employee->id, 'date' => $todayStr],
             ['check_in' => now()->format('H:i:s'), 'status' => 'present']
         );
 
@@ -29,14 +30,15 @@ class AttendanceController extends Controller
         $employee = auth()->user()->employee;
         if (!$employee) return back()->with('error', 'Employee record not found.');
         
+        $todayStr = today()->format('Y-m-d');
         $attendance = \App\Models\Attendance::where('employee_id', $employee->id)
-                        ->where('date', today())
+                        ->where('date', $todayStr)
                         ->first();
 
         if (!$attendance) return back()->with('error', 'No check-in record found for today.');
         if ($attendance->check_out) return back()->with('error', 'Already checked out.');
 
-        $checkIn = \Carbon\Carbon::parse($attendance->check_in);
+        $checkIn = \Carbon\Carbon::parse($todayStr . ' ' . $attendance->check_in);
         $checkOut = now();
         $totalMinutes = $checkIn->diffInMinutes($checkOut);
         $totalHours   = round($totalMinutes / 60, 2);

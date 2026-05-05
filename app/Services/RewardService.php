@@ -32,12 +32,10 @@ class RewardService
                 break;
         }
 
-        // Initialize points if null
-        $employee->attendance_points = ($employee->attendance_points ?? 0) + $points;
-        $employee->total_points = ($employee->total_points ?? 0) + $points;
+        // Update points balance (single source of truth)
+        $employee->points = ($employee->points ?? 0) + $points;
         
         $this->evaluateBadges($employee);
-        $this->updatePerformanceScore($employee);
         $employee->save();
 
         if ($points > 0) {
@@ -56,13 +54,11 @@ class RewardService
             return;
         }
 
-        $employee->attendance_points = ($employee->attendance_points ?? 0) + 20;
-        $employee->total_points = ($employee->total_points ?? 0) + 20;
+        $employee->points = ($employee->points ?? 0) + 20;
         $employee->save();
 
         $this->notify($employee, "🔥 20 Bonus Points awarded for perfect weekly attendance!", 'success');
         $this->evaluateBadges($employee);
-        $this->updatePerformanceScore($employee);
     }
 
     /**
@@ -70,26 +66,9 @@ class RewardService
      */
     public function evaluateBadges(Employee $employee)
     {
-        $badges = $employee->badges ?? [];
-        $total = $employee->total_points ?? 0;
-        $newBadge = null;
-
-        if ($total >= 700 && !in_array('Gold', $badges)) {
-            $badges[] = 'Gold';
-            $newBadge = 'Gold 🥇';
-        } elseif ($total >= 400 && !in_array('Silver', $badges)) {
-            $badges[] = 'Silver';
-            $newBadge = 'Silver 🥈';
-        } elseif ($total >= 200 && !in_array('Bronze', $badges)) {
-            $badges[] = 'Bronze';
-            $newBadge = 'Bronze 🥉';
-        }
-
-        if ($newBadge) {
-            $employee->badges = $badges;
-            $employee->save();
-            $this->notify($employee, "Achievement Unlocked: You earned the {$newBadge} Badge!", 'success');
-        }
+        // Badge evaluation now handled exclusively by EvaluateMonthlyPerformance cron
+        // to ensure badges are based on real monthly evaluated data, not running totals
+        return;
     }
 
     /**

@@ -4,17 +4,31 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Eloquent\Model;
+use App\Traits\LogsActivity;
 
 class Employee extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $connection = 'mongodb';
     protected $collection = 'employees';
 
     protected $fillable = [
-        'user_id', 'department_id', 'employee_code', 'phone', 'address', 'joined_date',
-        'attendance_points', 'total_points', 'rating', 'performance_score', 'badges'
+        'user_id',
+        'employee_code',
+        'department_id',
+        'designation',
+        'joining_date',
+        'status',
+        'skills',
+        'experience_years',
+        'task_completion_score',
+        'points',
+        'badges'
+    ];
+
+    protected $casts = [
+        'points' => 'integer'
     ];
 
     public function user()        { return $this->belongsTo(User::class); }
@@ -24,6 +38,8 @@ class Employee extends Model
     public function payrolls()    { return $this->hasMany(Payroll::class); }
     public function contracts()   { return $this->hasMany(Contract::class); }
     public function alerts()      { return $this->hasMany(Alert::class); }
+    public function performanceRecords() { return $this->hasMany(PerformanceRecord::class); }
+    public function ratings()     { return $this->hasMany(Rating::class, 'evaluatee_id'); }
 
     public function getRouteKeyName(): string { return '_id'; }
 }
