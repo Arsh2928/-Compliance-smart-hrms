@@ -76,7 +76,11 @@
             <div class="auth-logo-icon"><i class="bi bi-shield-check"></i></div>
             <span class="auth-logo-text">ComplianceSys</span>
         </a>
-        @yield('content')
+        @isset($slot)
+            {{ $slot }}
+        @else
+            @yield('content')
+        @endisset
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
