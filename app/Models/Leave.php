@@ -1,0 +1,20 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use MongoDB\Laravel\Eloquent\Model;
+
+class Leave extends Model
+{
+    use HasFactory;
+
+    protected $connection = 'mongodb';
+    protected $collection = 'leaves';
+
+    protected $fillable = ['employee_id', 'start_date', 'end_date', 'type', 'reason', 'status', 'admin_remark'];
+
+    public function employee() { return $this->belongsTo(Employee::class); }
+
+    public function getRouteKeyName(): string { return '_id'; }
+}
