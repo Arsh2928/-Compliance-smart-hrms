@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/about', [HomeController::class, 'about'])->name('about');
 Route::get('/features', [HomeController::class, 'features'])->name('features');
+Route::get('/leaderboard/public', [HomeController::class, 'leaderboard'])->name('public.leaderboard');
 Route::get('/contact', [HomeController::class, 'contact'])->name('contact');
+Route::post('/contact', [HomeController::class, 'submitContact'])->name('contact.submit');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -29,12 +31,14 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
 
     // Alerts
+    Route::post('/alerts/mark-all-read', [AlertController::class, 'markAllRead'])->name('alerts.read.all');
     Route::get('/alerts/{alert}/read', [AlertController::class, 'markAsRead'])->name('alerts.read');
 
     // Reward / Leaderboard / Engage — all roles
     Route::get('/leaderboard', [RewardController::class, 'leaderboard'])->name('leaderboard.index');
     Route::get('/rewards', [RewardController::class, 'rewardsCenter'])->name('rewards.index');
     Route::post('/rewards/redeem', [RewardController::class, 'redeemReward'])->name('rewards.redeem');
+    Route::post('/rewards/use', [RewardController::class, 'useVoucher'])->name('rewards.use');
 
     // Performance System API Routes (JSON endpoints)
     Route::post('/api/employees/{id}/rate', [PerformanceController::class, 'storeRating'])->name('api.employees.rate');
@@ -46,6 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/messages/create', [\App\Http\Controllers\MessageController::class, 'create'])->name('messages.create');
     Route::post('/messages', [\App\Http\Controllers\MessageController::class, 'store'])->name('messages.store');
     Route::get('/messages/{message}', [\App\Http\Controllers\MessageController::class, 'show'])->name('messages.show');
+    Route::post('/messages/{message}/reply', [\App\Http\Controllers\MessageController::class, 'reply'])->name('messages.reply');
 
     // ── ADMIN ROUTES ───────────────────────────────────────────────────
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
@@ -64,6 +69,7 @@ Route::middleware('auth')->group(function () {
             ->parameters(['leaves' => 'leave']);
         Route::resource('complaints', \App\Http\Controllers\Admin\ComplaintController::class)->only(['index', 'update']);
         Route::get('/payrolls/download-all', [\App\Http\Controllers\Admin\PayrollController::class, 'downloadAll'])->name('payrolls.downloadAll');
+        Route::get('/payrolls/calculate', [\App\Http\Controllers\Admin\PayrollController::class, 'calculate'])->name('payrolls.calculate');
         Route::get('/payrolls/{payroll}/download', [\App\Http\Controllers\Admin\PayrollController::class, 'downloadPdf'])->name('payrolls.download');
         Route::resource('payrolls', \App\Http\Controllers\Admin\PayrollController::class)->only(['index', 'create', 'store', 'update', 'edit']);
         Route::resource('contracts', \App\Http\Controllers\Admin\ContractController::class)->except(['show', 'destroy']);
@@ -86,9 +92,12 @@ Route::middleware('auth')->group(function () {
             ->parameters(['leaves' => 'leave']);
         Route::resource('complaints', \App\Http\Controllers\HR\ComplaintController::class)->only(['index', 'update']);
         Route::get('/payrolls/download-all', [\App\Http\Controllers\HR\PayrollController::class, 'downloadAll'])->name('payrolls.downloadAll');
+        Route::get('/payrolls/calculate', [\App\Http\Controllers\Admin\PayrollController::class, 'calculate'])->name('payrolls.calculate');
         Route::get('/payrolls/{payroll}/download', [\App\Http\Controllers\HR\PayrollController::class, 'downloadPdf'])->name('payrolls.download');
         Route::resource('payrolls', \App\Http\Controllers\HR\PayrollController::class)->only(['index', 'create', 'store', 'update', 'edit']);
         Route::resource('contracts', \App\Http\Controllers\HR\ContractController::class)->except(['show', 'destroy']);
+        Route::post('/attendance/check-in', [\App\Http\Controllers\Employee\AttendanceController::class, 'checkIn'])->name('attendance.checkin');
+        Route::post('/attendance/check-out', [\App\Http\Controllers\Employee\AttendanceController::class, 'checkOut'])->name('attendance.checkout');
     });
 
     // ── EMPLOYEE ROUTES ────────────────────────────────────────────────
@@ -105,5 +114,6 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/verify-otp', [\App\Http\Controllers\Auth\OtpController::class, 'showVerifyForm'])->name('otp.verify');
 Route::post('/verify-otp', [\App\Http\Controllers\Auth\OtpController::class, 'verifyOtp'])->name('otp.verify.post');
+Route::post('/verify-otp/resend', [\App\Http\Controllers\Auth\OtpController::class, 'resendOtp'])->name('otp.verify.resend');
 
 require __DIR__.'/auth.php';

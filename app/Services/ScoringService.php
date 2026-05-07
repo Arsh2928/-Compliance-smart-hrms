@@ -6,6 +6,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use App\Models\Leave;
 use App\Models\Rating;
+use App\Models\Task;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -62,7 +63,7 @@ class ScoringService
         $flags = array_merge($flags, $ratingFlags);
 
         // --- TASK COMPLETION ---
-        [$normTask, $taskFlags, $missedDeadlines] = $this->computeTask($employee);
+        [$normTask, $taskFlags, $missedDeadlines] = $this->computeTask($employee, $month);
         $components['task'] = round($normTask, 4);
         $flags = array_merge($flags, $taskFlags);
 
@@ -203,8 +204,8 @@ class ScoringService
 
         if ($uniqueEvaluators < self::MIN_EVALUATORS_REQUIRED) {
             $flags[] = "insufficient_evaluators:{$uniqueEvaluators}";
-            // Return neutral 0.5 — not penalised, not rewarded
-            return [0.5, $flags, ['evaluator_count' => $uniqueEvaluators, 'method' => 'neutral_fallback']];
+            // Return strictly 0.0 when there is no data
+            return [0.0, $flags, ['evaluator_count' => $uniqueEvaluators, 'method' => 'insufficient_data']];
         }
 
         // Get raw averages per evaluator (one rating per evaluator per month)
@@ -250,26 +251,51 @@ class ScoringService
     // =========================================================================
 
     /**
-     * Currently uses employee->task_completion_score (0-100).
-     * Future: integrate a task management module here.
+     * Calculate task completion based on database Task records.
      */
-    private function computeTask(Employee $employee): array
+    private function computeTask(Employee $employee, string $month): array
     {
-        $score  = max(0, min(100, (float)($employee->task_completion_score ?? 75)));
-        $normalised = $score / 100.0;
+        $start = \Carbon\Carbon::parse($month . '-01')->startOfMonth();
+        $end   = \Carbon\Carbon::parse($month . '-01')->endOfMonth();
+
+        $tasks = Task::where('employee_id', $employee->id)
+            ->whereBetween('deadline', [$start, $end])
+            ->get();
+
+        $totalTasks = $tasks->count();
         
-        // Mocking missed deadlines since we don't have a Task model yet
-        // If task score is below 60, we assume 1 missed deadline, below 40 -> 2.
-        $missedDeadlines = 0;
-        if ($score < 60) $missedDeadlines = 1;
-        if ($score < 40) $missedDeadlines = 2;
-        
-        $flags = [];
-        if ($missedDeadlines > 0) {
-            $flags[] = "task:poor_completion_inferred_missed_deadlines";
+        if ($totalTasks === 0) {
+            return [0.0, [], 0]; // Strictly 0.0 when there is no data
         }
 
-        return [$normalised, $flags, $missedDeadlines];
+        $completedOnTime = 0;
+        $completedLate = 0;
+        $missedDeadlines = 0;
+
+        foreach ($tasks as $task) {
+            if ($task->status === 'completed') {
+                if ($task->completed_at && $task->completed_at <= $task->deadline) {
+                    $completedOnTime++;
+                } else {
+                    $completedLate++;
+                    $missedDeadlines++;
+                }
+            } else {
+                if (now() > $task->deadline) {
+                    $missedDeadlines++;
+                }
+            }
+        }
+
+        $score = ($completedOnTime + (0.5 * $completedLate)) / $totalTasks;
+        $normalised = max(0, min(1.0, $score));
+
+        $flags = [];
+        if ($missedDeadlines > 0) {
+            $flags[] = "task:missed_{$missedDeadlines}_deadlines";
+        }
+
+        return [round($normalised, 4), $flags, $missedDeadlines];
     }
 
     // =========================================================================
@@ -348,16 +374,13 @@ class ScoringService
         return [$start, $end];
     }
 
-    /**
-     * Calculate how many more score points needed to hit next tier.
-     * Tier cutoffs based on the last month's min scores in PerformanceRecord.
-     */
     public function nextTierInfo(float $liveScore, string $month): array
     {
         $level5Min = 90;
         $level4Min = 80;
         $level3Min = 65;
         $level2Min = 50;
+        $level1Min = 25; // 0-24 is Unranked
 
         if ($liveScore >= $level5Min) {
             return ['current_tier' => 'Level 5', 'next_tier' => null, 'points_needed' => 0];
@@ -367,8 +390,10 @@ class ScoringService
             return ['current_tier' => 'Level 3', 'next_tier' => 'Level 4', 'points_needed' => round($level4Min - $liveScore, 1)];
         } elseif ($liveScore >= $level2Min) {
             return ['current_tier' => 'Level 2', 'next_tier' => 'Level 3', 'points_needed' => round($level3Min - $liveScore, 1)];
-        } else {
+        } elseif ($liveScore >= $level1Min) {
             return ['current_tier' => 'Level 1', 'next_tier' => 'Level 2', 'points_needed' => round($level2Min - $liveScore, 1)];
+        } else {
+            return ['current_tier' => 'None', 'next_tier' => 'Level 1', 'points_needed' => round($level1Min - $liveScore, 1)];
         }
     }
 }

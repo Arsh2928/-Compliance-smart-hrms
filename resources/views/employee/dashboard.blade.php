@@ -28,23 +28,22 @@
 {{-- Performance & Rating --}}
 @if(isset($employee))
 @php
-    $badges  = $employee->badges ?? [];
-    $highest = collect(['Level 5','Level 4','Level 3','Level 2','Level 1'])->first(fn($t) => in_array($t, $badges));
-    $tierEmoji = $highest === 'Level 5' ? '🥇' : ($highest === 'Level 4' ? '🥈' : ($highest === 'Level 3' ? '🥉' : '🚀'));
+    $currentTier = $tierInfo['current_tier'] ?? 'Level 1';
+    $tierEmoji = $currentTier === 'Level 5' ? '🥇' : ($currentTier === 'Level 4' ? '🥈' : ($currentTier === 'Level 3' ? '🥉' : '🚀'));
 @endphp
 
 {{-- Row 1: Live Score + Tier Progression --}}
 <div class="row g-3 mb-3">
     {{-- Live Score Card --}}
     <div class="col-md-5">
-        <div class="card h-100" style="background: linear-gradient(135deg, #0f172a, #1e293b); color: #fff;">
+        <div class="card h-100">
             <div class="card-body p-4">
-                <h6 class="text-uppercase mb-2" style="font-size: 0.72rem; letter-spacing: 1.2px; color: #94a3b8;">
-                    Live Performance Score <span class="badge bg-primary ms-1">Real-Time</span>
+                <h6 class="text-uppercase mb-2 text-dark" style="font-size: 0.72rem; letter-spacing: 1.2px; font-weight: 700;">
+                    Live Performance Score <span class="badge bg-primary-light text-primary ms-1">Real-Time</span>
                 </h6>
                 <div class="d-flex align-items-end gap-2 mb-2">
-                    <div class="fw-bold text-white" style="font-size: 2.5rem; line-height:1;">{{ $liveScore }}</div>
-                    <div style="color:#94a3b8; font-size:1rem; margin-bottom:4px;">/&nbsp;100</div>
+                    <div class="fw-bold text-dark" style="font-size: 2.5rem; line-height:1;">{{ $liveScore }}</div>
+                    <div class="text-secondary" style="font-size:1rem; margin-bottom:4px;">/&nbsp;100</div>
                     <div class="ms-auto fs-2">{{ $tierEmoji }}</div>
                 </div>
                 @if($latestRecord)
@@ -113,18 +112,21 @@
                         ['label'=>'Consistency',  'key'=>'consistency',  'weight'=>15, 'color'=>'#0ea5e9'],
                     ];
                 @endphp
+                <div class="score-liquid-stack">
                 @foreach($breakdown as $item)
                 @php $val = round(($comp[$item['key']] ?? 0) * 100, 1); @endphp
-                <div class="mb-2">
-                    <div class="d-flex justify-content-between mb-1">
-                        <small class="text-muted">{{ $item['label'] }} ({{ $item['weight'] }}%)</small>
-                        <small class="fw-bold">{{ $val }}%</small>
+                    <div class="score-liquid-item" style="--fill: {{ $val }}%; --accent: {{ $item['color'] }};">
+                        <div class="score-liquid-fill"></div>
+                        <div class="score-liquid-content">
+                            <div>
+                                <span class="score-liquid-label">{{ $item['label'] }}</span>
+                                <small>{{ $item['weight'] }}% weight</small>
+                            </div>
+                            <strong>{{ $val }}%</strong>
+                        </div>
                     </div>
-                    <div class="progress" style="height: 7px;">
-                        <div class="progress-bar" style="width: {{ $val }}%; background: {{ $item['color'] }};"></div>
-                    </div>
-                </div>
                 @endforeach
+                </div>
             </div>
         </div>
     </div>
@@ -133,24 +135,28 @@
     <div class="col-md-6">
         <div class="card h-100" style="border-left: 4px solid #8b5cf6;">
             <div class="card-body p-4">
-                <h6 class="text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 1px; color: #8b5cf6;"><i class="bi bi-robot"></i> AI Coach</h6>
-                @if($weakestCategory)
-                    <div class="alert alert-warning py-2 px-3 mb-2" style="font-size:0.85rem;">
-                        <strong>Focus area:</strong> {{ $weakestCategory['label'] }}<br>
-                        <small>Score: {{ $weakestCategory['score'] }}/5 &mdash; Improving this will unlock your next reward tier.</small>
-                    </div>
-                @endif
-                @if(!empty($scoreFlags))
-                    <div class="mt-2">
-                        <small class="text-muted d-block fw-bold mb-1">⚠ System Flags:</small>
-                        @foreach($scoreFlags as $flag)
-                        <small class="badge bg-light text-secondary me-1 mb-1">{{ str_replace('_', ' ', $flag) }}</small>
+                <h6 class="text-uppercase mb-3" style="font-size: 0.75rem; letter-spacing: 1px; color: #8b5cf6;"><i class="bi bi-robot"></i> Personalized AI Coach</h6>
+                
+                @if(isset($aiInsights) && count($aiInsights) > 0)
+                    <div class="d-flex flex-column gap-3">
+                        @foreach($aiInsights as $insight)
+                            <div class="d-flex align-items-start gap-3 p-3 rounded" style="background-color: {{ $insight['type'] === 'danger' ? '#fef2f2' : ($insight['type'] === 'warning' ? '#fffbeb' : ($insight['type'] === 'info' ? '#eff6ff' : '#f0fdf4')) }}; border-left: 3px solid {{ $insight['type'] === 'danger' ? '#ef4444' : ($insight['type'] === 'warning' ? '#f59e0b' : ($insight['type'] === 'info' ? '#3b82f6' : '#10b981')) }};">
+                                <div class="fs-4 text-{{ $insight['type'] === 'danger' ? 'danger' : ($insight['type'] === 'warning' ? 'warning' : ($insight['type'] === 'info' ? 'primary' : 'success')) }}" style="margin-top: -4px;">
+                                    <i class="bi {{ $insight['icon'] }}"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1 text-dark" style="font-size: 0.88rem;">{{ $insight['title'] }}</h6>
+                                    <p class="mb-0 text-muted" style="font-size: 0.8rem; line-height: 1.4;">{{ $insight['message'] }}</p>
+                                </div>
+                            </div>
                         @endforeach
                     </div>
+                @else
+                    <div class="alert alert-success py-2 px-3 mb-0" style="font-size:0.85rem;">
+                        <i class="bi bi-check-circle-fill me-1"></i> All metrics look great! Keep maintaining consistency.
+                    </div>
                 @endif
-                @if(!$weakestCategory && empty($scoreFlags))
-                    <p class="mb-0 text-success"><i class="bi bi-check-circle-fill me-1"></i>All metrics look great! Keep maintaining consistency.</p>
-                @endif
+                
             </div>
         </div>
     </div>

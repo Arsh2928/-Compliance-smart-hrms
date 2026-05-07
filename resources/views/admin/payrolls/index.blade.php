@@ -51,32 +51,55 @@
                     <td>
                         @if($payroll->status === 'paid')
                             <span class="badge bg-success">Paid</span>
+                        @elseif($payroll->status === 'approved')
+                            <span class="badge bg-info text-white">Approved</span>
                         @else
-                            <span class="badge bg-warning">Pending</span>
+                            <span class="badge bg-warning text-dark">Pending</span>
                         @endif
                     </td>
                     <td class="payroll-actions-cell">
-                        @if($payroll->status === 'pending')
+                        @php
+                            $updateRoute = auth()->user()->role === 'admin' ? route('admin.payrolls.update', $payroll) : route('hr.payrolls.update', $payroll);
+                            $editRoute = auth()->user()->role === 'admin' ? route('admin.payrolls.edit', $payroll) : route('hr.payrolls.edit', $payroll);
+                            $downloadRoute = auth()->user()->role === 'admin' ? route('admin.payrolls.download', $payroll) : route('hr.payrolls.download', $payroll);
+                        @endphp
                         <div class="payroll-row-actions">
-                            <form action="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.update', $payroll) : route('hr.payrolls.update', $payroll) }}" method="POST">
-                                @csrf @method('PUT')
-                                <input type="hidden" name="status" value="paid">
-                                <button type="submit" class="btn btn-sm btn-success" title="Mark Paid">
-                                    <i class="bi bi-check-circle"></i>
-                                </button>
-                            </form>
-                            <a href="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.edit', $payroll) : route('hr.payrolls.edit', $payroll) }}" class="btn btn-sm btn-outline-primary" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </a>
+                            {{-- PENDING: admin can edit + approve, HR can only approve --}}
+                            @if($payroll->status === 'pending')
+                                @if(auth()->user()->role === 'admin')
+                                    <a href="{{ $editRoute }}" class="btn btn-sm btn-outline-primary" title="Edit Payroll">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                @endif
+                                <form action="{{ $updateRoute }}" method="POST" class="d-inline">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="status" value="approved">
+                                    <button type="submit" class="btn btn-sm btn-info text-white" title="Approve">
+                                        <i class="bi bi-check-circle"></i> Approve
+                                    </button>
+                                </form>
+                            {{-- APPROVED: both admin and HR can mark as paid --}}
+                            @elseif($payroll->status === 'approved')
+                                <form action="{{ $updateRoute }}" method="POST" class="d-inline">
+                                    @csrf @method('PUT')
+                                    <input type="hidden" name="status" value="paid">
+                                    <button type="submit" class="btn btn-sm btn-success" title="Mark Paid">
+                                        <i class="bi bi-cash-coin"></i> Mark Paid
+                                    </button>
+                                </form>
+                                <a href="{{ $downloadRoute }}" class="btn btn-sm btn-outline-secondary" title="Download Payslip">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            {{-- PAID: settled --}}
+                            @else
+                                <span class="badge bg-light text-success border border-success payroll-settled-badge">
+                                    <i class="bi bi-check-all me-1"></i> Settled
+                                </span>
+                                <a href="{{ $downloadRoute }}" class="btn btn-sm btn-outline-secondary" title="Download Payslip">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            @endif
                         </div>
-                        @else
-                        <div class="payroll-row-actions">
-                            <span class="badge bg-light text-success border border-success payroll-settled-badge"><i class="bi bi-check-all me-1"></i> Settled</span>
-                            <a href="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.download', $payroll) : route('hr.payrolls.download', $payroll) }}" class="btn btn-sm btn-outline-secondary" title="Download Payslip">
-                                <i class="bi bi-download"></i>
-                            </a>
-                        </div>
-                        @endif
                     </td>
                 </tr>
                 @empty

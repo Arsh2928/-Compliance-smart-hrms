@@ -38,6 +38,7 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name'     => ['required', 'string', 'max:255'],
             'email'    => ['required', 'string', 'email', 'max:255'],
+            'phone'    => ['nullable', 'string', 'max:20'],
             'password' => ['required', 'confirmed', Rules\Password::min(8)],
         ]);
 
@@ -49,6 +50,7 @@ class RegisteredUserController extends Controller
                 // Account activation: let them set their real password
                 $existingUser->update([
                     'name'     => $request->name,
+                    'phone'    => $request->phone ?? $existingUser->phone,
                     'password' => Hash::make($request->password),
                 ]);
 
@@ -60,7 +62,7 @@ class RegisteredUserController extends Controller
             // Already fully registered — block
             return back()->withErrors([
                 'email' => 'An account with this email already exists. Please log in instead.',
-            ])->withInput($request->only('name', 'email'));
+            ])->withInput($request->only('name', 'email', 'phone'));
         }
 
         // Brand new user
@@ -68,6 +70,7 @@ class RegisteredUserController extends Controller
         $user = User::create([
             'name'     => $request->name,
             'email'    => strtolower($request->email),
+            'phone'    => $request->phone,
             'password' => Hash::make($request->password),
             'role'     => 'employee',
             'status'   => 'pending',

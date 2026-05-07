@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Admin Dashboard')
+@section('title', auth()->user()->role === 'hr' ? 'HR Dashboard' : 'Admin Dashboard')
 
 @section('content')
 @php $role = auth()->user()->role; @endphp
@@ -15,12 +15,39 @@
           </h4>
           <p class="text-sm text-secondary mb-0">Here is what is happening today - {{ now()->format('l, d F Y') }}</p>
         </div>
-        <a href="{{ $role === 'hr' ? route('hr.employees.create') : route('admin.employees.create') }}" class="btn bg-gradient-warning mb-0">
-          <i class="bi bi-person-plus-fill me-2"></i>Add Employee
-        </a>
+        <div class="d-flex align-items-center gap-3">
+            @if($role === 'hr' && isset($hrEmployee))
+                <form action="{{ route('hr.attendance.checkin') }}" method="POST" class="m-0">
+                    @csrf
+                    <button class="btn btn-success mb-0 shadow-sm"><i class="bi bi-box-arrow-in-right me-1"></i> Check In</button>
+                </form>
+                <form action="{{ route('hr.attendance.checkout') }}" method="POST" class="m-0">
+                    @csrf
+                    <button class="btn btn-outline-danger mb-0 shadow-sm"><i class="bi bi-box-arrow-left me-1"></i> Check Out</button>
+                </form>
+            @endif
+            <a href="{{ $role === 'hr' ? route('hr.employees.create') : route('admin.employees.create') }}" class="btn bg-gradient-warning mb-0">
+              <i class="bi bi-person-plus-fill me-2"></i>Add Employee
+            </a>
+        </div>
       </div>
     </div>
   </div>
+
+  @if($role === 'hr' && isset($hrEmployee))
+  <div class="col-12 mb-4">
+    <div class="card">
+        <div class="card-header pb-0">
+            <h6>My Attendance Log (Last 7 Days)</h6>
+        </div>
+        <div class="card-body p-3">
+            <div class="chart">
+                <canvas id="hrAttendanceChart" class="chart-canvas" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+  </div>
+  @endif
 
   <div class="col-12">
     <h6 class="text-uppercase text-xs font-weight-bolder opacity-7 mb-3">Top Performers This Month</h6>
@@ -262,13 +289,37 @@
       <div class="card-body pt-3">
         @php
           $attendancePct = $totalEmployees > 0 ? round(($attendanceToday / $totalEmployees) * 100) : 0;
-          $leavePct = $pendingLeaves > 0 ? 60 : 100;
-          $complaintsPct = $openComplaints > 0 ? 40 : 100;
+          
+          $totalLeavesCount = \App\Models\Leave::count();
+          $leavePct = $totalLeavesCount > 0 ? round((($totalLeavesCount - $pendingLeaves) / $totalLeavesCount) * 100) : null;
+          
+          $totalComplaintsCount = \App\Models\Complaint::count();
+          $complaintsPct = $totalComplaintsCount > 0 ? round((($totalComplaintsCount - $openComplaints) / $totalComplaintsCount) * 100) : null;
+          
+          $validMetrics = [$attendancePct];
+          if ($leavePct !== null) $validMetrics[] = $leavePct;
+          if ($complaintsPct !== null) $validMetrics[] = $complaintsPct;
+          
+          $overallPct = count($validMetrics) > 0 ? round(array_sum($validMetrics) / count($validMetrics)) : 0;
+
+          // Helper to determine tone based on percentage
+          $getTone = function($pct, $type) {
+              if ($pct === null) return ['tone' => 'secondary', 'accent' => '#94a3b8'];
+              if ($pct >= 85) return ['tone' => 'success', 'accent' => '#22c55e'];
+              if ($pct >= 60) return ['tone' => 'warning', 'accent' => '#eab308'];
+              return ['tone' => 'danger', 'accent' => '#ef4444'];
+          };
+
+          $attStyle = $getTone($attendancePct, 'attendance');
+          $leaveStyle = $getTone($leavePct, 'leave');
+          $compStyle = $getTone($complaintsPct, 'complaints');
+          $overallStyle = $getTone($overallPct, 'overall');
+
           $complianceMetrics = [
-            ['label' => 'Attendance Rate', 'value' => $attendancePct.'%', 'fill' => $attendancePct, 'tone' => 'success', 'accent' => '#22c55e', 'icon' => 'bi-calendar-check-fill'],
-            ['label' => 'Leave Approval', 'value' => $pendingLeaves > 0 ? 'Pending' : '100%', 'fill' => $leavePct, 'tone' => 'warning', 'accent' => '#4f46e5', 'icon' => 'bi-calendar2-x-fill'],
-            ['label' => 'Complaints', 'value' => $openComplaints > 0 ? $openComplaints.' Open' : '100%', 'fill' => $complaintsPct, 'tone' => 'danger', 'accent' => '#ef4444', 'icon' => 'bi-exclamation-octagon-fill'],
-            ['label' => 'Overall', 'value' => '87%', 'fill' => 87, 'tone' => 'primary', 'accent' => '#4f46e5', 'icon' => 'bi-shield-check'],
+            ['label' => 'Attendance Rate', 'value' => $attendancePct.'%', 'fill' => $attendancePct, 'tone' => $attStyle['tone'], 'accent' => $attStyle['accent'], 'icon' => 'bi-calendar-check-fill'],
+            ['label' => 'Leave Resolution', 'value' => $leavePct !== null ? $leavePct.'%' : 'N/A', 'fill' => $leavePct ?? 0, 'tone' => $leaveStyle['tone'], 'accent' => $leaveStyle['accent'], 'icon' => 'bi-calendar2-x-fill'],
+            ['label' => 'Complaint Resolution', 'value' => $complaintsPct !== null ? $complaintsPct.'%' : 'N/A', 'fill' => $complaintsPct ?? 0, 'tone' => $compStyle['tone'], 'accent' => $compStyle['accent'], 'icon' => 'bi-exclamation-octagon-fill'],
+            ['label' => 'Overall Health', 'value' => $overallPct.'%', 'fill' => $overallPct, 'tone' => $overallStyle['tone'], 'accent' => $overallStyle['accent'], 'icon' => 'bi-shield-check'],
           ];
         @endphp
         <div class="compliance-stack">
@@ -452,10 +503,10 @@ if (perfCtx) {
     new Chart(canvas, {
         type: 'bar',
         data: {
-            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            labels: {!! json_encode($performanceLabels ?? []) !!},
             datasets: [{
                 label: 'Average Score',
-                data: [72, 78, 81, 86],
+                data: {!! json_encode($performanceData ?? []) !!},
                 backgroundColor: gradPurple,
                 borderColor: '#4f46e5',
                 borderWidth: 2,
@@ -491,10 +542,10 @@ if (rewardCtx) {
     new Chart(rewardCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Level 5', 'Level 4', 'Level 3', 'Level 2', 'Level 1'],
+            labels: {!! json_encode($rewardLabels ?? []) !!},
             datasets: [{
-                data: [10, 20, 30, 20, 20],
-                backgroundColor: ['#4f46e5', '#22c55e', '#0ea5e9', '#f59e0b', '#ef4444'],
+                data: {!! json_encode($rewardData ?? []) !!},
+                backgroundColor: ['#eab308', '#94a3b8', '#d97706', '#9ca3af'], // Gold, Silver, Bronze, None
                 borderWidth: 0,
                 hoverOffset: 4
             }]
@@ -512,5 +563,33 @@ if (rewardCtx) {
         }
     });
 }
+
+@if($role === 'hr' && isset($hrChartDates))
+var ctxHr = document.getElementById("hrAttendanceChart");
+if(ctxHr) {
+    new Chart(ctxHr, {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($hrChartDates ?? []) !!},
+            datasets: [{
+                label: 'Hours Logged',
+                data: {!! json_encode($hrChartHours ?? []) !!},
+                backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, max: 12, ticks: { stepSize: 2 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+@endif
 </script>
 @endpush

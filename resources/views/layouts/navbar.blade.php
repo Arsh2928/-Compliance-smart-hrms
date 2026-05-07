@@ -43,7 +43,15 @@
               @endif
             </a>
             <div class="dropdown-menu dropdown-menu-end px-2 py-3 shadow-lg border-0 ui-nav-dropdown">
-              <h6 class="text-uppercase text-xs font-weight-bolder opacity-7 px-2 mb-2">Notifications</h6>
+              <div class="d-flex justify-content-between align-items-center px-2 mb-2">
+                <h6 class="text-uppercase text-xs font-weight-bolder opacity-7 mb-0">Notifications</h6>
+                @if($unreadCount > 0)
+                  <form action="{{ route('alerts.read.all') }}" method="POST" class="m-0 p-0">
+                    @csrf
+                    <button type="submit" class="btn btn-link text-xs text-primary p-0 m-0 text-decoration-none">Mark all as read</button>
+                  </form>
+                @endif
+              </div>
               @forelse($unreadAlerts as $alert)
                 <a href="{{ route('alerts.read', $alert) }}" class="dropdown-item border-radius-md">
                   <div class="d-flex py-1">

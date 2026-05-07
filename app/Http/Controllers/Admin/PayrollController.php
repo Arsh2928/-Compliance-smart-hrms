@@ -19,6 +19,75 @@ class PayrollController extends Controller
         return view('admin.payrolls.create', compact('employees'));
     }
 
+    public function calculate(Request $request)
+    {
+        $request->validate([
+            'employee_id' => 'required|string',
+            'month' => 'required|integer',
+            'year' => 'required|integer'
+        ]);
+
+        $employee = \App\Models\Employee::find($request->employee_id);
+        if (!$employee) return response()->json(['error' => 'Not found'], 404);
+
+        // Get basic salary from contract
+        $contract = \App\Models\Contract::where('employee_id', $employee->id)->where('status', 'active')->first();
+        $basicSalary = $contract ? $contract->basic_salary : 0;
+
+        $monthStr = str_pad($request->month, 2, '0', STR_PAD_LEFT);
+        $prefix = $request->year . '-' . $monthStr . '-';
+
+        // Calculate attendance stats (using string comparison for Y-m-d)
+        $attendances = \App\Models\Attendance::where('employee_id', $employee->id)
+            ->where('date', '>=', $prefix . '01')
+            ->where('date', '<=', $prefix . '31')
+            ->get();
+
+        $overtimeHours = 0;
+        foreach ($attendances as $att) {
+            if ($att->total_hours > 8) {
+                $overtimeHours += ($att->total_hours - 8);
+            }
+        }
+
+        // Calculate absences
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $request->month, $request->year);
+        $workingDays = 0;
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $date = \Carbon\Carbon::create($request->year, $request->month, $d);
+            if (!$date->isWeekend()) {
+                $workingDays++;
+            }
+        }
+
+        $presentDays = $attendances->count();
+        $approvedLeaves = \App\Models\Leave::where('employee_id', $employee->id)
+            ->where('status', 'approved')
+            ->where('start_date', '>=', $prefix . '01')
+            ->where('start_date', '<=', $prefix . '31')
+            ->count(); // Simplified count
+
+        $absences = max(0, $workingDays - ($presentDays + $approvedLeaves));
+
+        // Deductions & Pay
+        $perDaySalary = $basicSalary / 30;
+        $absentDeductions = $absences * $perDaySalary;
+        
+        $overtimePay = $overtimeHours * ($perDaySalary / 8) * 1.5;
+        
+        // Let's add 10% tax automatically
+        $gross = $basicSalary + $overtimePay - $absentDeductions;
+        $tax = $gross > 0 ? $gross * 0.10 : 0;
+        $totalDeductions = $absentDeductions + $tax;
+
+        return response()->json([
+            'basic_salary' => round($basicSalary, 2),
+            'overtime_hours' => round($overtimeHours, 1),
+            'overtime_pay' => round($overtimePay, 2),
+            'deductions' => round($totalDeductions, 2)
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -29,7 +98,7 @@ class PayrollController extends Controller
             'overtime_hours'=> 'nullable|numeric|min:0',
             'overtime_pay'  => 'nullable|numeric|min:0',
             'deductions'    => 'nullable|numeric|min:0',
-            'status'        => 'required|in:pending,paid',
+            'status'        => 'required|in:pending,approved,paid',
         ]);
 
         // Manual check (MongoDB doesn't support exists: rule)
@@ -71,7 +140,7 @@ class PayrollController extends Controller
                 'overtime_hours'=> 'nullable|numeric|min:0',
                 'overtime_pay'  => 'nullable|numeric|min:0',
                 'deductions'    => 'nullable|numeric|min:0',
-                'status'        => 'required|in:pending,paid',
+                'status'        => 'required|in:pending,approved,paid',
             ]);
 
             $basic      = $request->basic_salary;
@@ -90,8 +159,24 @@ class PayrollController extends Controller
             return redirect()->route('admin.payrolls.index')->with('success', 'Payroll updated successfully.');
         }
 
-        $request->validate(['status' => 'required|in:pending,paid']);
+        $request->validate(['status' => 'required|in:pending,approved,paid']);
         $payroll->update(['status' => $request->status]);
+
+        // Notify employee when approved or paid
+        $employee = $payroll->employee;
+        if ($employee && $employee->user) {
+            $msg = $request->status === 'approved'
+                ? "Your payslip has been approved by admin."
+                : "Your salary for " . \DateTime::createFromFormat('!m', $payroll->month)->format('F') . " {$payroll->year} has been paid. ₹" . number_format($payroll->net_salary, 2);
+            \App\Models\Alert::create([
+                'user_id' => $employee->user->id,
+                'type'    => $request->status === 'approved' ? 'info' : 'success',
+                'message' => $msg,
+                'is_read' => false,
+                'link'    => '#',
+            ]);
+        }
+
         return redirect()->route('admin.payrolls.index')->with('success', 'Payroll status updated.');
     }
 

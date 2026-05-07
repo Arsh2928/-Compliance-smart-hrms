@@ -44,9 +44,21 @@ class AttendanceController extends Controller
         $totalHours   = round($totalMinutes / 60, 2);
 
         $attendance->update([
-            'check_out' => $checkOut->format('H:i:s'),
+            'check_out'   => $checkOut->format('H:i:s'),
             'total_hours' => $totalHours,
         ]);
+
+        // Send overtime notification if worked more than 8 hours
+        $overtimeHours = round(max(0, $totalHours - 8), 2);
+        if ($overtimeHours > 0) {
+            \App\Models\Alert::create([
+                'user_id' => auth()->id(),
+                'type'    => 'success',
+                'message' => "Great work! You worked {$overtimeHours} extra hour(s) today. This overtime will be included in your monthly payroll.",
+                'is_read' => false,
+                'link'    => '#',
+            ]);
+        }
 
         return back()->with('success', 'Checked out successfully. Total hours: ' . round($totalHours, 2));
     }

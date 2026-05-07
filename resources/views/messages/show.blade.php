@@ -12,14 +12,21 @@
     <div class="card-header bg-white p-4">
         <h3 class="mb-3">{{ $message->subject }}</h3>
         
+        @php
+            $senderName = $message->sender_id ? $message->sender->name : ($message->guest_name ?? 'Unknown Sender');
+            $senderEmail = $message->sender_id ? $message->sender->email : ($message->guest_email ?? 'No email provided');
+            $initial = strtoupper(substr($senderName, 0, 1));
+            $isReceiverMe = $message->receiver_id === auth()->id();
+        @endphp
+
         <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
                 <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px; font-size: 1.2rem; font-weight: bold;">
-                    {{ strtoupper(substr($message->sender->name, 0, 1)) }}
+                    {{ $initial }}
                 </div>
                 <div>
-                    <h6 class="mb-0 fw-bold">{{ $message->sender->name }}</h6>
-                    <small class="text-muted">To: {{ $message->receiver_id === auth()->id() ? 'Me' : $message->receiver->name }}</small>
+                    <h6 class="mb-0 fw-bold">{{ $senderName }} <small class="text-muted fw-normal">({{ $senderEmail }})</small></h6>
+                    <small class="text-muted">To: {{ $isReceiverMe ? 'Me' : ($message->receiver->name ?? 'Unknown') }}</small>
                 </div>
             </div>
             <div class="text-end">
@@ -30,14 +37,29 @@
         </div>
     </div>
     <div class="card-body p-4 bg-light">
-        <div class="message-body" style="white-space: pre-wrap; font-size: 1rem; line-height: 1.6; color: #334155;">
-{{ $message->body }}
-        </div>
+        <div class="message-body" style="white-space: pre-wrap; font-size: 1rem; line-height: 1.6; color: #334155;">{{ $message->body }}</div>
     </div>
-    <div class="card-footer bg-white p-3 text-end">
-        <a href="{{ route('messages.create', ['reply_to' => $message->sender_id]) }}" class="btn btn-primary">
-            <i class="bi bi-reply me-1"></i> Reply
-        </a>
+    
+    @if(session('success'))
+        <div class="alert alert-success m-3">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger m-3">{{ session('error') }}</div>
+    @endif
+
+    @if($isReceiverMe)
+    <div class="card-footer bg-white p-4">
+        <h6 class="mb-3"><i class="bi bi-reply me-1"></i> Quick Reply</h6>
+        <form method="POST" action="{{ route('messages.reply', $message->id) }}">
+            @csrf
+            <div class="mb-3">
+                <textarea name="reply_body" class="form-control" rows="4" placeholder="Type your reply here..." required></textarea>
+            </div>
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary">Send Reply</button>
+            </div>
+        </form>
     </div>
+    @endif
 </div>
 @endsection

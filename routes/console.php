@@ -18,3 +18,13 @@ Schedule::command('payroll:generate')
     ->appendOutputTo(storage_path('logs/cron-payroll.log'));
 
 Schedule::command('hr:check-contracts')->dailyAt('08:00')->withoutOverlapping();
+
+Schedule::command('hr:auto-assign-tasks')
+    ->weeklyOn(5, '23:00') // Every Friday at 11:00 PM
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/cron-tasks.log'));
+
+Schedule::command('hr:sync-live-scores')
+    ->hourly()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/cron-livescores.log'));

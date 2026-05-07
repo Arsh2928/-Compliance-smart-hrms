@@ -40,6 +40,7 @@ class Employee extends Model
     public function alerts()      { return $this->hasMany(Alert::class); }
     public function performanceRecords() { return $this->hasMany(PerformanceRecord::class); }
     public function ratings()     { return $this->hasMany(Rating::class, 'evaluatee_id'); }
+    public function tasks()       { return $this->hasMany(Task::class); }
 
     public function getRouteKeyName(): string { return '_id'; }
 }

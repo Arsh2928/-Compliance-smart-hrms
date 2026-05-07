@@ -50,9 +50,22 @@
                         @endif
                     </td>
                     <td class="contract-actions-cell">
-                        <a href="{{ route('admin.contracts.edit', $contract) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-pencil-fill me-1"></i>Edit
-                        </a>
+                        @php
+                            $isOwnContract = $contract->employee && $contract->employee->user_id === auth()->id();
+                            $editRoute = auth()->user()->role === 'admin' 
+                                ? route('admin.contracts.edit', $contract) 
+                                : route('hr.contracts.edit', $contract);
+                        @endphp
+                        
+                        @if($isOwnContract)
+                            <button class="btn btn-sm btn-outline-secondary" disabled title="You cannot edit your own contract">
+                                <i class="bi bi-pencil-fill me-1"></i>Edit
+                            </button>
+                        @else
+                            <a href="{{ $editRoute }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil-fill me-1"></i>Edit
+                            </a>
+                        @endif
                     </td>
                 </tr>
                 @empty

@@ -19,6 +19,8 @@ class Message extends Model
         'body',
         'is_read',
         'read_at',
+        'guest_name',
+        'guest_email',
     ];
 
     protected $casts = [

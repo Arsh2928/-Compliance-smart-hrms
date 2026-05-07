@@ -1,15 +1,15 @@
 @extends('layouts.guest')
-@section('title', 'Sign In — ComplianceSys')
+@section('title', 'Sign In - ComplianceSys')
 
 @section('content')
 <h1 class="auth-title">Welcome back</h1>
-<p class="auth-subtitle">Sign in to your compliance workspace</p>
+<p class="auth-subtitle">Sign in to manage attendance, payroll, alerts, and compliance records.</p>
 
 @if(session('status'))
     <div class="alert alert-success mb-3">{{ session('status') }}</div>
 @endif
 
-<form method="POST" action="{{ route('login') }}">
+<form method="POST" action="{{ route('login') }}" class="auth-form">
     @csrf
 
     <div class="mb-3">
@@ -26,7 +26,7 @@
         <div class="input-group auth-password-group">
             <input id="password" type="password"
                    class="form-control @error('password') is-invalid @enderror"
-                   name="password" required placeholder="••••••••">
+                   name="password" required placeholder="Enter your password">
             <button class="btn btn-outline-secondary auth-password-toggle" type="button" id="togglePassword" aria-label="Show password">
                 <i class="bi bi-eye"></i>
             </button>
@@ -34,7 +34,7 @@
         </div>
     </div>
 
-    <div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-4 gap-3">
         <div class="form-check mb-0">
             <input type="checkbox" class="form-check-input" id="remember_me" name="remember">
             <label class="form-check-label ui-auth-small" for="remember_me">Remember me</label>
@@ -53,13 +53,13 @@
     <div class="text-center ui-auth-small text-secondary">
         Don't have an account?
         <a href="{{ route('register') }}" class="ui-auth-link fw-bold">
-            Create one free →
+            Create one free
         </a>
     </div>
 </form>
 
 <script>
-    document.getElementById('togglePassword').addEventListener('click', function (e) {
+    document.getElementById('togglePassword').addEventListener('click', function () {
         const password = document.getElementById('password');
         const icon = this.querySelector('i');
         if (password.type === 'password') {

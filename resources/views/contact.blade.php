@@ -15,21 +15,28 @@
 
         <div class="row justify-content-center">
             <div class="col-lg-7">
+                @if(session('success'))
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+                @if(session('error'))
+                    <div class="alert alert-danger">{{ session('error') }}</div>
+                @endif
                 <div class="card landing-form-card">
                     <div class="card-body">
-                        <form>
+                        <form method="POST" action="{{ route('contact.submit') }}">
+                            @csrf
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Name</label>
-                                    <input type="text" class="form-control" placeholder="Your Name">
+                                    <input type="text" name="name" class="form-control" placeholder="Your Name" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Email</label>
-                                    <input type="email" class="form-control" placeholder="Your Email">
+                                    <input type="email" name="email" class="form-control" placeholder="Your Email" required>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label">Message</label>
-                                    <textarea class="form-control" rows="5" placeholder="How can we help you?"></textarea>
+                                    <textarea name="message" class="form-control" rows="5" placeholder="How can we help you?" required></textarea>
                                 </div>
                                 <div class="col-12 d-flex gap-2 flex-wrap">
                                     <button type="submit" class="btn btn-primary">Send Message</button>

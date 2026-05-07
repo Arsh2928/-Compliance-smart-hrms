@@ -61,38 +61,31 @@ class PayrollController extends Controller
 
     public function edit(\App\Models\Payroll $payroll)
     {
-        return view('admin.payrolls.edit', compact('payroll'));
+        // HR cannot edit payroll details — redirect back with error
+        return redirect()->route('hr.payrolls.index')->with('error', 'HR cannot edit payroll details. Only admins can edit.');
     }
 
     public function update(Request $request, \App\Models\Payroll $payroll)
     {
-        if ($request->has('basic_salary')) {
-            $request->validate([
-                'basic_salary'  => 'required|numeric|min:0',
-                'overtime_hours'=> 'nullable|numeric|min:0',
-                'overtime_pay'  => 'nullable|numeric|min:0',
-                'deductions'    => 'nullable|numeric|min:0',
-                'status'        => 'required|in:pending,paid',
-            ]);
+        // HR can ONLY change status (approve or mark paid), never edit financials
+        $request->validate(['status' => 'required|in:pending,approved,paid']);
+        $payroll->update(['status' => $request->status]);
 
-            $basic      = $request->basic_salary;
-            $overtime   = $request->overtime_pay ?? 0;
-            $deductions = $request->deductions ?? 0;
-            $net_salary = ($basic + $overtime) - $deductions;
-
-            $payroll->update([
-                'basic_salary'   => $basic,
-                'overtime_hours' => $request->overtime_hours ?? 0,
-                'overtime_pay'   => $overtime,
-                'deductions'     => $deductions,
-                'net_salary'     => $net_salary,
-                'status'         => $request->status,
+        // Notify employee on status change
+        $employee = $payroll->employee;
+        if ($employee && $employee->user) {
+            $msg = $request->status === 'approved'
+                ? "Your payslip has been approved."
+                : "Your salary for " . \DateTime::createFromFormat('!m', $payroll->month)->format('F') . " {$payroll->year} has been paid. ₹" . number_format($payroll->net_salary, 2);
+            \App\Models\Alert::create([
+                'user_id' => $employee->user->id,
+                'type'    => $request->status === 'approved' ? 'info' : 'success',
+                'message' => $msg,
+                'is_read' => false,
+                'link'    => '#',
             ]);
-            return redirect()->route('hr.payrolls.index')->with('success', 'Payroll updated successfully.');
         }
 
-        $request->validate(['status' => 'required|in:pending,paid']);
-        $payroll->update(['status' => $request->status]);
         return redirect()->route('hr.payrolls.index')->with('success', 'Payroll status updated.');
     }
 

@@ -11,14 +11,19 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Employee::with('user', 'department');
+        $query = Employee::with('user', 'department')
+            ->whereHas('user', function ($q) {
+                $q->where('role', '!=', 'admin');
+            });
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%");
-            })->orWhere('employee_code', 'like', "%$search%");
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($qu) use ($search) {
+                    $qu->where('name', 'like', "%$search%")
+                      ->orWhere('email', 'like', "%$search%");
+                })->orWhere('employee_code', 'like', "%$search%");
+            });
         }
 
         if ($request->filled('department')) {

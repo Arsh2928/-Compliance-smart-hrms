@@ -26,13 +26,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($messages as $message)
-                    <tr class="{{ $message->is_read ? '' : 'table-primary fw-bold' }}">
-                        <td>{{ $message->sender->name }}</td>
-                        <td>{{ \Illuminate\Support\Str::limit($message->subject, 50) }}</td>
-                        <td>{{ $message->created_at->diffForHumans() }}</td>
+                    @forelse($messages as $msg)
+                    <tr>
                         <td>
-                            <a href="{{ route('messages.show', $message) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            <div class="d-flex align-items-center">
+                                <i class="bi {{ $msg->is_read ? 'bi-envelope-open text-muted' : 'bi-envelope-fill text-primary' }} me-2"></i>
+                                <span class="{{ $msg->is_read ? '' : 'fw-bold' }}">
+                                    {{ $msg->sender_id ? $msg->sender->name : ($msg->guest_name ?? 'Guest') }}
+                                </span>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{{ route('messages.show', $msg) }}" class="text-decoration-none text-dark {{ $msg->is_read ? '' : 'fw-bold' }}">
+                                {{ \Illuminate\Support\Str::limit($msg->subject, 40) }}
+                            </a>
+                        </td>
+                        <td class="text-muted small">
+                            {{ $msg->created_at->format('M d, Y') }}
+                        </td>
+                        <td>
+                            <a href="{{ route('messages.show', $msg) }}" class="btn btn-sm btn-outline-primary">View</a>
                         </td>
                     </tr>
                     @empty

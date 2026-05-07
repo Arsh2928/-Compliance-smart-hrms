@@ -9,7 +9,9 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $totalEmployees   = \App\Models\Employee::count();
+        $totalEmployees = \App\Models\Employee::whereHas('user', function($q) {
+            $q->where('role', '!=', 'admin');
+        })->count();
         $todayStr         = today()->format('Y-m-d');
         $attendanceToday  = \App\Models\Attendance::where('date', $todayStr)->count();
         $pendingLeaves    = \App\Models\Leave::where('status', 'pending')->count();
@@ -21,36 +23,36 @@ class DashboardController extends Controller
         // Get the latest evaluated month, fallback to current month
         $month = \App\Models\PerformanceRecord::max('month') ?? now()->format('Y-m');
 
-        // TOP PERFORMERS: Single Source of Truth
-        $topRecords = \App\Models\PerformanceRecord::with('employee.user')
+        // FETCH RECORDS FOR CURRENT MONTH
+        $allRecords = \App\Models\PerformanceRecord::with('employee.user')
             ->where('month', $month)
             ->whereHas('employee', function($q) use ($employeeUserIds) {
                 $q->whereIn('user_id', $employeeUserIds);
             })
-            ->orderBy('final_score', 'desc')
-            ->take(3)
             ->get();
+
+        // TOP PERFORMERS: Single Source of Truth
+        $topRecords = $allRecords->sortByDesc(function($r) {
+            return $r->final_score ?? $r->live_score ?? 0;
+        })->take(3);
             
         $topPerformers = $topRecords->map(function($record) {
             $emp = $record->employee;
-            $emp->performance_score = $record->final_score;
+            $emp->performance_score = round($record->final_score ?? $record->live_score ?? 0, 1);
             return $emp;
         });
             
         // LOW PERFORMERS: Single Source of Truth
-        $lowRecords = \App\Models\PerformanceRecord::with('employee.user')
-            ->where('month', $month)
-            ->where('final_score', '<', 50) // Actual low performers only
-            ->whereHas('employee', function($q) use ($employeeUserIds) {
-                $q->whereIn('user_id', $employeeUserIds);
-            })
-            ->orderBy('final_score', 'asc')
-            ->take(3)
-            ->get();
+        $lowRecords = $allRecords->filter(function($r) {
+            $score = $r->final_score ?? $r->live_score ?? 0;
+            return $score < 50 && $score > 0; // Only actual low performers, ignore 0s
+        })->sortBy(function($r) {
+            return $r->final_score ?? $r->live_score ?? 0;
+        })->take(3);
 
         $lowPerformers = $lowRecords->map(function($record) {
             $emp = $record->employee;
-            $emp->performance_score = $record->final_score;
+            $emp->performance_score = round($record->final_score ?? $record->live_score ?? 0, 1);
             return $emp;
         });
 
@@ -103,10 +105,40 @@ class DashboardController extends Controller
         // Auto-generate compliance alerts (safe)
         try { $this->evaluateAlerts(); } catch (\Exception $e) {}
 
+        // ==========================================
+        // REAL DATA FOR CHARTS
+        // ==========================================
+        
+        // 1. Performance Trends (Last 6 Months Average Score)
+        $performanceLabels = [];
+        $performanceData = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $m = now()->subMonths($i)->format('Y-m');
+            $performanceLabels[] = now()->subMonths($i)->format('M Y');
+            $recordsInMonth = \App\Models\PerformanceRecord::where('month', $m)->get();
+            $avg = $recordsInMonth->avg(function($r) {
+                return $r->final_score ?? $r->live_score ?? 0;
+            }) ?? 0;
+            $performanceData[] = round($avg, 1);
+        }
+
+        // 2. Reward Distribution (Badges)
+        $allEmps = \App\Models\Employee::all();
+        $badgeCounts = ['Gold' => 0, 'Silver' => 0, 'Bronze' => 0, 'None' => 0];
+        foreach ($allEmps as $e) {
+            $b = is_array($e->badges) ? $e->badges : [];
+            if (in_array('Gold', $b)) $badgeCounts['Gold']++;
+            elseif (in_array('Silver', $b)) $badgeCounts['Silver']++;
+            elseif (in_array('Bronze', $b)) $badgeCounts['Bronze']++;
+            else $badgeCounts['None']++;
+        }
+        $rewardLabels = array_keys($badgeCounts);
+        $rewardData = array_values($badgeCounts);
+
         return view('admin.dashboard', compact(
             'totalEmployees', 'attendanceToday', 'pendingLeaves',
             'openComplaints', 'complianceAlerts', 'chartDates', 'chartData', 'chartLeaves', 'topPerformers', 'lowPerformers',
-            'topPredictor', 'burnoutRisks'
+            'topPredictor', 'burnoutRisks', 'performanceLabels', 'performanceData', 'rewardLabels', 'rewardData'
         ));
     }
 

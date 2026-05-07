@@ -154,3 +154,54 @@
   </div>
 </section>
 
+<section class="py-5 home-hall-section">
+  <div class="container">
+    <div class="row text-center mb-4">
+      <div class="col-12">
+        <h2 class="font-weight-bolder mb-1">Hall of Fame</h2>
+        <p class="text-secondary mb-0">Our top performers for the current month</p>
+      </div>
+    </div>
+    
+    <div class="row justify-content-center g-4">
+      @forelse($topRankers ?? [] as $index => $record)
+        @php
+          $emp = $record->employee;
+          $user = $emp->user;
+          $badges = is_array($emp->badges) ? $emp->badges : [];
+          $highest = !empty($badges) ? last($badges) : '';
+          $medal = $index === 0 ? 'bi-trophy-fill text-warning' : ($index === 1 ? 'bi-award-fill text-secondary' : 'bi-award-fill text-primary');
+          $score = round($record->final_score ?? $record->live_score ?? 0, 1);
+        @endphp
+        <div class="col-md-4">
+          <div class="card home-hall-card shadow-sm h-100 text-center border-0" style="--rank-color: {{ $index === 0 ? '#f59e0b' : ($index === 1 ? '#94a3b8' : '#3b82f6') }};">
+            <div class="card-body">
+              <div class="home-hall-avatar avatar avatar-xl rounded-circle shadow mb-3 mx-auto d-flex align-items-center justify-content-center {{ $index === 0 ? 'is-gold' : '' }}">
+                <span class="font-weight-bolder fs-4">{{ substr($user->name, 0, 1) }}</span>
+              </div>
+              <h5 class="mb-1">{{ $user->name }}</h5>
+              <p class="text-sm text-secondary mb-3">{{ $emp->department->name ?? 'Staff' }}</p>
+              
+              <div class="d-flex justify-content-center gap-2 mb-3">
+                <span class="badge bg-light text-dark shadow-sm">
+                  <i class="bi {{ $medal }} me-1"></i> {{ $score }} pts
+                </span>
+                @if($highest)
+                <span class="badge bg-gradient-success shadow-sm">{{ $highest }}</span>
+                @endif
+              </div>
+            </div>
+          </div>
+        </div>
+      @empty
+        <div class="col-12 text-center text-secondary">
+          <p>No performance records available yet.</p>
+        </div>
+      @endforelse
+    </div>
+    
+    <div class="text-center mt-5">
+      <a href="{{ route('public.leaderboard') }}" class="btn btn-outline-primary mb-0">View Full Leaderboard</a>
+    </div>
+  </div>
+</section>

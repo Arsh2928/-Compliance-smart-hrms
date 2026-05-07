@@ -56,28 +56,50 @@ class RewardController extends Controller
         // Top 3 cached separately (never paginated)
         $topThree = Cache::remember("{$cacheKey}:top3", 300, function () use ($month, $empIdFilter) {
             $query = PerformanceRecord::with('employee.user', 'employee.department')
-                ->where('month', $month)
-                ->orderBy('rank', 'asc')
-                ->limit(3);
+                ->where('month', $month);
 
             if ($empIdFilter !== null) {
                 $query->whereIn('employee_id', $empIdFilter);
             }
 
-            return $query->get()->map(fn($r) => $this->formatRecord($r));
+            $allRecords = $query->get()->sortByDesc(function($r) {
+                return $r->final_score ?? $r->live_score ?? 0;
+            })->values();
+
+            $total = $allRecords->count();
+            foreach ($allRecords as $index => $r) {
+                $r->dynamic_rank = $index + 1;
+                $r->dynamic_percentile = $total > 0 ? max(1, round((1 - ($index / $total)) * 100)) : 0;
+            }
+
+            return $allRecords->take(3)->map(fn($r) => $this->formatRecord($r));
         });
 
         // ── Main paginated leaderboard ─────────────────────────────────
-        $leaderboard = Cache::remember("{$cacheKey}:page:{$page}", 300, function () use ($month, $empIdFilter, $request) {
+        $leaderboard = Cache::remember("{$cacheKey}:page:{$page}", 300, function () use ($month, $empIdFilter, $page) {
             $query = PerformanceRecord::with('employee.user', 'employee.department')
-                ->where('month', $month)
-                ->orderBy('rank', 'asc');
+                ->where('month', $month);
 
             if ($empIdFilter !== null) {
                 $query->whereIn('employee_id', $empIdFilter);
             }
 
-            $paginator = $query->paginate(15);
+            $allRecords = $query->get()->sortByDesc(function($r) {
+                return $r->final_score ?? $r->live_score ?? 0;
+            })->values();
+
+            $total = $allRecords->count();
+            foreach ($allRecords as $index => $r) {
+                $r->dynamic_rank = $index + 1;
+                $r->dynamic_percentile = $total > 0 ? max(1, round((1 - ($index / $total)) * 100)) : 0;
+            }
+
+            $slice = $allRecords->slice(($page - 1) * 15, 15)->values();
+            $paginator = new \Illuminate\Pagination\LengthAwarePaginator($slice, $total, 15, $page, [
+                'path' => request()->url(),
+                'query' => request()->query()
+            ]);
+
             $paginator->getCollection()->transform(fn($r) => $this->formatRecord($r));
             return $paginator;
         });
@@ -110,12 +132,12 @@ class RewardController extends Controller
             'initials'      => strtoupper(substr($user?->name ?? 'U', 0, 1)),
             'employee_code' => $employee?->employee_code ?? '—',
             'department'    => $employee?->department?->name ?? '—',
-            'rank'          => $record->rank,
+            'rank'          => $record->dynamic_rank ?? $record->rank,
             'rank_delta'    => $rankDelta,
             'delta_icon'    => $deltaIcon,
-            'final_score'   => round((float)$record->final_score, 1),
+            'final_score'   => round((float)($record->final_score ?? $record->live_score ?? 0), 1),
             'reward_tier'   => $record->reward_tier ?? 'None',
-            'percentile'    => $record->percentile ?? 0,
+            'percentile'    => $record->dynamic_percentile ?? $record->percentile ?? 0,
             'badges'        => $employee?->badges ?? [],
             'flags'         => $record->flags ?? [],
         ];
@@ -130,13 +152,16 @@ class RewardController extends Controller
         $employee = auth()->user()->employee;
 
         $rewards = [
-            ['id' => 1, 'name' => 'Amazon Gift Card ₹2000', 'cost' => 500,  'icon' => 'bi-gift'],
-            ['id' => 2, 'name' => 'Extra Paid Leave Day',   'cost' => 800,  'icon' => 'bi-calendar-plus'],
-            ['id' => 3, 'name' => 'Free Lunch Voucher',     'cost' => 200,  'icon' => 'bi-cup-hot'],
-            ['id' => 4, 'name' => 'Team Outing Pass',       'cost' => 1000, 'icon' => 'bi-people'],
+            ['id' => 1, 'name' => 'Premium Coffee Shop Voucher', 'cost' => 300,  'icon' => 'bi-cup-hot'],
+            ['id' => 2, 'name' => 'Extra Paid Leave Day',        'cost' => 800,  'icon' => 'bi-calendar-plus'],
+            ['id' => 3, 'name' => 'Company Merchandise',         'cost' => 500,  'icon' => 'bi-bag-heart'],
+            ['id' => 4, 'name' => 'Team Outing Pass',            'cost' => 1000, 'icon' => 'bi-people'],
         ];
 
-        return view('rewards.index', compact('employee', 'rewards'));
+        // Fetch user's vouchers
+        $myVouchers = collect($employee->owned_vouchers ?? [])->sortByDesc('redeemed_at')->values()->all();
+
+        return view('rewards.index', compact('employee', 'rewards', 'myVouchers'));
     }
 
     public function redeemReward(Request $request)
@@ -156,10 +181,56 @@ class RewardController extends Controller
             return back()->with('error', "Insufficient points. You have " . ($employee->points ?? 0) . " pts, need {$request->cost}.");
         }
 
+        $rewardName = $request->input('reward_name', 'Reward Voucher');
+
         $employee->points -= (int) $request->cost;
+        
+        $vouchers = $employee->owned_vouchers ?? [];
+        $vouchers[] = [
+            'voucher_id'  => uniqid('VOUCHER-'),
+            'reward_id'   => $request->reward_id,
+            'reward_name' => $rewardName,
+            'cost'        => $request->cost,
+            'redeemed_at' => now()->toDateTimeString(),
+            'is_used'     => false,
+            'used_at'     => null,
+        ];
+        
+        $employee->owned_vouchers = $vouchers;
         $employee->save();
 
-        return back()->with('success', 'Reward redeemed! Your manager will follow up shortly.');
+        return back()->with('success', 'Reward redeemed successfully! You can now use this voucher in the organization.');
+    }
+
+    public function useVoucher(Request $request)
+    {
+        $request->validate([
+            'voucher_id' => 'required|string',
+        ]);
+
+        $employee = auth()->user()->employee;
+        if (!$employee) return back()->with('error', 'Only employees can use vouchers.');
+
+        $vouchers = $employee->owned_vouchers ?? [];
+        $found = false;
+
+        foreach ($vouchers as &$v) {
+            if ($v['voucher_id'] === $request->voucher_id && !$v['is_used']) {
+                $v['is_used'] = true;
+                $v['used_at'] = now()->toDateTimeString();
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            return back()->with('error', 'Voucher not found or already used.');
+        }
+
+        $employee->owned_vouchers = $vouchers;
+        $employee->save();
+
+        return back()->with('success', 'Voucher marked as used successfully!');
     }
 
     // =========================================================================

@@ -3,7 +3,7 @@
 
 @section('content')
     <h1 class="auth-title">Reset your password</h1>
-    <p class="auth-subtitle">Enter your email and we will send you a password reset link.</p>
+    <p class="auth-subtitle">Enter your email and we will send you a 6-digit OTP code to reset your password.</p>
 
     <a href="{{ route('login') }}" class="btn btn-sm btn-outline-secondary mb-3">
         <i class="bi bi-arrow-left"></i> Back to Login
@@ -23,7 +23,7 @@
         </div>
 
         <button type="submit" class="btn bg-gradient-primary w-100 py-2 mt-3 ui-auth-btn">
-            Email Password Reset Link
+            Send Reset Code
         </button>
     </form>
 @endsection

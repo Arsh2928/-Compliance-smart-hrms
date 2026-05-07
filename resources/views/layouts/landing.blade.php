@@ -27,6 +27,7 @@
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">Home</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about') }}">About</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('features') ? 'active' : '' }}" href="{{ route('features') }}">Features</a></li>
+                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('public.leaderboard') ? 'active' : '' }}" href="{{ route('public.leaderboard') }}">Leaderboard</a></li>
                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact') }}">Contact</a></li>
                 </ul>
 

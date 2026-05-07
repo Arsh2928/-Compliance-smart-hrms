@@ -7,6 +7,7 @@ use App\Models\MonthlyReward;
 use App\Models\PerformanceRecord;
 use App\Services\RatingService;
 use App\Services\ScoringService;
+use App\Services\AiCoachService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -47,9 +48,12 @@ class DashboardController extends Controller
         $scoreComponents = $scoreResult['components'];
         $scoreFlags      = $scoreResult['flags'];
 
-        // ── Weakest metric (suppressed if all metrics are good) ────────
+        // ── Weakest metric & AI Insights ─────────────────────────────────
         $ratingService   = app(RatingService::class);
         $weakestCategory = $ratingService->getWeakestCategory($employee);
+
+        $aiCoach         = app(AiCoachService::class);
+        $aiInsights      = $aiCoach->generateInsights($scoreComponents, $scoreFlags);
 
         // ── Tier progression ───────────────────────────────────────────
         $latestMonth = PerformanceRecord::max('month') ?? $currentMonth;
@@ -89,6 +93,7 @@ class DashboardController extends Controller
             'scoreComponents',
             'scoreFlags',
             'weakestCategory',
+            'aiInsights',
             'tierInfo',
             'latestRecord',
             'rewardHistory',

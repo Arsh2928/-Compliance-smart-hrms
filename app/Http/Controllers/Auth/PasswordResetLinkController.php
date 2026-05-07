@@ -30,16 +30,28 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        $user = \App\Models\User::where('email', $request->email)->first();
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                        ->withErrors(['email' => __($status)]);
+        if ($user) {
+            $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $user->forceFill([
+                'otp_code' => $otp,
+                'otp_expires_at' => now()->addMinutes(15),
+            ])->save();
+
+            \Illuminate\Support\Facades\Mail::raw("Your Password Reset Code is: $otp. It expires in 15 minutes.", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('Password Reset Code');
+            });
+            session()->put('reset_email', $user->email);
+        } else {
+            // To prevent email enumeration, we still redirect to the OTP form
+            // but we don't actually send an email or set the reset_email in session.
+            // Or we can just set it anyway, it will just fail validation later.
+            session()->put('reset_email', $request->email);
+        }
+
+        return redirect()->route('password.otp.form')
+                         ->with('status', 'We have emailed your password reset OTP!');
     }
 }

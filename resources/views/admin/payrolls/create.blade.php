@@ -74,3 +74,47 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const empSelect = document.querySelector('select[name="employee_id"]');
+    const monthSelect = document.querySelector('select[name="month"]');
+    const yearInput = document.querySelector('input[name="year"]');
+    
+    const basicInput = document.querySelector('input[name="basic_salary"]');
+    const deductionsInput = document.querySelector('input[name="deductions"]');
+    const otHoursInput = document.querySelector('input[name="overtime_hours"]');
+    const otPayInput = document.querySelector('input[name="overtime_pay"]');
+
+    function calculatePayroll() {
+        const empId = empSelect.value;
+        const month = monthSelect.value;
+        const year = yearInput.value;
+
+        if (!empId || !month || !year) return;
+
+        // Route URL works for both admin and HR as defined in web.php
+        const rolePrefix = window.location.pathname.startsWith('/hr/') ? 'hr' : 'admin';
+        const url = `/${rolePrefix}/payrolls/calculate?employee_id=${empId}&month=${month}&year=${year}`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) return;
+                
+                // If the user hasn't manually overridden things, we update it
+                basicInput.value = data.basic_salary;
+                deductionsInput.value = data.deductions;
+                otHoursInput.value = data.overtime_hours;
+                otPayInput.value = data.overtime_pay;
+            })
+            .catch(err => console.error('Error fetching payroll calculation:', err));
+    }
+
+    empSelect.addEventListener('change', calculatePayroll);
+    monthSelect.addEventListener('change', calculatePayroll);
+    yearInput.addEventListener('change', calculatePayroll);
+});
+</script>
+@endpush

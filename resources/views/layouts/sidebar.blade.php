@@ -49,8 +49,6 @@
           <li class="nav-item mt-3">
             <h6 class="ps-4 ms-2 text-uppercase text-xs text-secondary font-weight-bolder opacity-8">Engage</h6>
           </li>
-          {!! sideLink('Leaderboard','bi-trophy-fill',route('leaderboard.index'),request()->routeIs('leaderboard.*')) !!}
-          {!! sideLink('Rewards','bi-gift-fill',route('rewards.index'),request()->routeIs('rewards.*')) !!}
           {!! sideLink('Messages','bi-chat-dots-fill',route('messages.index'),request()->routeIs('messages.*')) !!}
           {!! sideLink('Profile','bi-person-circle',route('profile.edit'),request()->routeIs('profile.*')) !!}
 
@@ -70,8 +68,6 @@
           <li class="nav-item mt-3">
             <h6 class="ps-4 ms-2 text-uppercase text-xs text-secondary font-weight-bolder opacity-8">Engage</h6>
           </li>
-          {!! sideLink('Leaderboard','bi-trophy-fill',route('leaderboard.index'),request()->routeIs('leaderboard.*')) !!}
-          {!! sideLink('Rewards','bi-gift-fill',route('rewards.index'),request()->routeIs('rewards.*')) !!}
           {!! sideLink('Messages','bi-chat-dots-fill',route('messages.index'),request()->routeIs('messages.*')) !!}
           {!! sideLink('Profile','bi-person-circle',route('profile.edit'),request()->routeIs('profile.*')) !!}
 

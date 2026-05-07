@@ -88,4 +88,55 @@ class MessageController extends Controller
 
         return view('messages.show', compact('message'));
     }
+
+    public function reply(Request $request, Message $message)
+    {
+        // Ensure the user is the receiver of the original message to reply
+        if ($message->receiver_id !== auth()->id()) {
+            return abort(403, 'Unauthorized to reply to this message.');
+        }
+
+        $request->validate([
+            'reply_body' => 'required|string',
+        ]);
+
+        $replySubject = str_starts_with($message->subject, 'Re:') ? $message->subject : 'Re: ' . $message->subject;
+
+        if ($message->sender_id) {
+            // Internal User (Employee)
+            $replyMessage = Message::create([
+                'sender_id'   => auth()->id(),
+                'receiver_id' => $message->sender_id,
+                'subject'     => $replySubject,
+                'body'        => $request->reply_body . "\n\n--- Original Message ---\n" . $message->body,
+                'is_read'     => false,
+            ]);
+
+            try {
+                $originalSender = User::find($message->sender_id);
+                if ($originalSender && $originalSender->email) {
+                    Mail::to($originalSender->email)->send(new NewMessageMail($replyMessage));
+                }
+            } catch (\Exception $e) {
+                \Log::error("Failed to send reply email: " . $e->getMessage());
+            }
+
+            return back()->with('success', 'Reply sent successfully!');
+        } else {
+            // External Guest
+            try {
+                if ($message->guest_email) {
+                    $emailBody = $request->reply_body . "\n\n--- Original Message ---\n" . $message->body;
+                    Mail::raw($emailBody, function ($mail) use ($message, $replySubject) {
+                        $mail->to($message->guest_email)
+                             ->subject($replySubject);
+                    });
+                }
+                return back()->with('success', 'Reply sent to guest email successfully!');
+            } catch (\Exception $e) {
+                \Log::error("Failed to send guest reply email: " . $e->getMessage());
+                return back()->with('error', 'Failed to send email to guest.');
+            }
+        }
+    }
 }

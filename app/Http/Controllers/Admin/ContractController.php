@@ -9,7 +9,9 @@ class ContractController extends Controller
 {
     public function index()
     {
-        $contracts = \App\Models\Contract::with('employee.user')->latest()->paginate(10);
+        $contracts = \App\Models\Contract::whereHas('employee.user', function ($q) {
+            $q->where('role', '!=', 'admin');
+        })->with('employee.user')->latest()->paginate(10);
         return view('admin.contracts.index', compact('contracts'));
     }
 
@@ -44,13 +46,22 @@ class ContractController extends Controller
             return back()->withErrors(['employee_id' => 'Invalid employee selected.'])->withInput();
         }
 
-        \App\Models\Contract::create([
+        $contract = \App\Models\Contract::create([
             'employee_id'   => $request->employee_id,
             'start_date'    => $request->start_date,
             'end_date'      => $request->end_date,
             'document_path' => $request->document_path,
             'status'        => $request->status,
             'basic_salary'  => $request->basic_salary,
+        ]);
+
+        $employee = \App\Models\Employee::find($request->employee_id);
+        \App\Models\Alert::create([
+            'user_id' => $employee->user_id,
+            'type' => 'info',
+            'message' => 'A new contract has been created for you.',
+            'is_read' => false,
+            'link' => '#',
         ]);
 
         return redirect()->route('admin.contracts.index')->with('success', 'Contract added successfully.');
@@ -82,6 +93,17 @@ class ContractController extends Controller
         ]);
 
         $contract->update($request->only(['start_date', 'end_date', 'status', 'basic_salary']));
+
+        $employee = \App\Models\Employee::find($contract->employee_id);
+        if ($employee) {
+            \App\Models\Alert::create([
+                'user_id' => $employee->user_id,
+                'type' => $request->status === 'terminated' ? 'danger' : 'info',
+                'message' => "Your contract has been updated. Status is now: {$request->status}.",
+                'is_read' => false,
+                'link' => '#',
+            ]);
+        }
 
         return redirect()->route('admin.contracts.index')->with('success', 'Contract updated successfully.');
     }

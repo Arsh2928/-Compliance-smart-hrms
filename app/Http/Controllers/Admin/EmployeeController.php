@@ -13,14 +13,19 @@ class EmployeeController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Employee::with('user', 'department');
+        $query = Employee::with('user', 'department')
+            ->whereHas('user', function ($q) {
+                $q->where('role', '!=', 'admin');
+            });
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('email', 'like', "%$search%");
-            })->orWhere('employee_code', 'like', "%$search%");
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($qu) use ($search) {
+                    $qu->where('name', 'like', "%$search%")
+                      ->orWhere('email', 'like', "%$search%");
+                })->orWhere('employee_code', 'like', "%$search%");
+            });
         }
 
         if ($request->filled('department')) {
@@ -69,7 +74,7 @@ class EmployeeController extends Controller
             'status'   => 'approved',
         ]);
 
-        Employee::create([
+        $employee = Employee::create([
             'user_id'       => $user->id,
             'department_id' => $request->department_id,
             'employee_code' => $employeeCode,
@@ -78,8 +83,24 @@ class EmployeeController extends Controller
             'joined_date'   => $request->joined_date,
         ]);
 
+        \App\Models\Contract::create([
+            'employee_id' => $employee->id,
+            'start_date' => now()->format('Y-m-d'),
+            'end_date' => now()->addMonths(6)->format('Y-m-d'),
+            'status' => 'active',
+            'basic_salary' => 0,
+        ]);
+
+        \App\Models\Alert::create([
+            'user_id' => $user->id,
+            'type' => 'info',
+            'message' => 'A standard 6-month contract has been automatically generated for you.',
+            'is_read' => false,
+            'link' => '#',
+        ]);
+
         return redirect()->route('admin.employees.index')
-            ->with('success', 'Employee created. Default password: password123');
+            ->with('success', 'Employee created with a 6-month contract. Default password: password123');
     }
 
     public function show(Employee $employee)
@@ -148,14 +169,30 @@ class EmployeeController extends Controller
 
         $user->update(['status' => 'approved']);
 
-        Employee::create([
+        $employee = Employee::create([
             'user_id' => $user->id,
             'department_id' => $request->department_id,
             'employee_code' => $employeeCode,
             'joined_date' => now(),
         ]);
 
-        return redirect()->back()->with('success', 'User approved and employee record created.');
+        \App\Models\Contract::create([
+            'employee_id' => $employee->id,
+            'start_date' => now()->format('Y-m-d'),
+            'end_date' => now()->addMonths(6)->format('Y-m-d'),
+            'status' => 'active',
+            'basic_salary' => 0,
+        ]);
+
+        \App\Models\Alert::create([
+            'user_id' => $user->id,
+            'type' => 'info',
+            'message' => 'A standard 6-month contract has been automatically generated for you.',
+            'is_read' => false,
+            'link' => '#',
+        ]);
+
+        return redirect()->back()->with('success', 'User approved and employee record/contract created.');
     }
 
     public function rejectUser(User $user)
