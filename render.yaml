@@ -15,12 +15,19 @@ services:
         value: https://compliance-smart-hrms.onrender.com
       - key: DB_CONNECTION
         value: mongodb
-    secretEnvVars:
       - key: APP_KEY
+        value: base64:Ml5/QA1ki2dwVh0VLdGK8aY3PdmxFjF12SO/D23SkhU=
       - key: DB_HOST
+        value: cluster0.h49uadf.mongodb.net
       - key: DB_PORT
+        value: "27017"
       - key: DB_DATABASE
+        value: labour_compliance
       - key: DB_USERNAME
+        value: arshdeep20050217_db_user
       - key: DB_PASSWORD
+        value: 9afTXwztiNwhQApV
       - key: MAIL_FROM_ADDRESS
+        value: arsh2928m@gmail.com
       - key: MAIL_FROM_NAME
+        value: "Smart HRMS"
