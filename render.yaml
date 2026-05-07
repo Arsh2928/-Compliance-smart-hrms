@@ -15,6 +15,12 @@ services:
         value: https://compliance-smart-hrms.onrender.com
       - key: DB_CONNECTION
         value: mongodb
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
     secretEnvVars:
       - key: APP_KEY
       - key: MONGODB_URI
