@@ -1,0 +1,11 @@
+.git
+vendor
+node_modules
+public/build
+public/hot
+storage/*.key
+storage/pail
+.env
+.env.*
+/.idea
+/.vscode

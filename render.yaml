@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: compliance-smart-hrms
+    env: docker
+    plan: free
+    branch: main
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        value: https://compliance-smart-hrms.onrender.com
+      - key: DB_CONNECTION
+        value: mongodb
+    secretEnvVars:
+      - key: APP_KEY
+      - key: DB_HOST
+      - key: DB_PORT
+      - key: DB_DATABASE
+      - key: DB_USERNAME
+      - key: DB_PASSWORD
+      - key: MAIL_FROM_ADDRESS
+      - key: MAIL_FROM_NAME
