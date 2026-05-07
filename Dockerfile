@@ -36,6 +36,8 @@ RUN if [ "$APP_ENV" = "local" ] && [ ! -f .env ] && [ -f .env.example ]; then cp
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["/usr/local/bin/docker-entrypoint.sh"]
