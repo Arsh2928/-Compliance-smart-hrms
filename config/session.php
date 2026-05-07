@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Str;
 
+$sessionDriver = env('SESSION_DRIVER', 'file');
+if (env('APP_ENV', 'production') === 'production' && $sessionDriver !== 'file') {
+    $sessionDriver = 'file';
+}
+
 return [
 
     /*

@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Str;
 
+$cacheStore = env('CACHE_STORE', 'file');
+if (env('APP_ENV', 'production') === 'production' && $cacheStore !== 'file') {
+    $cacheStore = 'file';
+}
+
 return [
 
     /*

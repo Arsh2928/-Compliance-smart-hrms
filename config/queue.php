@@ -1,5 +1,10 @@
 <?php
 
+$queueConnection = env('QUEUE_CONNECTION', 'sync');
+if (env('APP_ENV', 'production') === 'production' && $queueConnection !== 'sync') {
+    $queueConnection = 'sync';
+}
+
 return [
 
     /*
