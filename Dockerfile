@@ -20,6 +20,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+ARG APP_ENV=production
+ENV APP_ENV=${APP_ENV}
+
 WORKDIR /var/www/html
 
 COPY . .
@@ -27,9 +30,9 @@ COPY . .
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf \
     && sed -ri -e 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/*.conf /etc/apache2/apache2.conf
 
-RUN if [ ! -f .env ]; then cp .env.example .env; fi \
+RUN if [ "$APP_ENV" = "local" ] && [ ! -f .env ] && [ -f .env.example ]; then cp .env.example .env; fi \
     && composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist \
-    && php artisan key:generate --force \
+    && if [ -f .env ]; then php artisan key:generate --force; fi \
     && chmod -R 775 storage bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache
 

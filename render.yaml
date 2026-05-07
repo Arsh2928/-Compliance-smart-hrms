@@ -17,6 +17,8 @@ services:
         value: mongodb
     secretEnvVars:
       - key: APP_KEY
+      - key: MONGODB_URI
+      - key: MONGODB_DATABASE
       - key: DB_HOST
       - key: DB_PORT
       - key: DB_DATABASE
