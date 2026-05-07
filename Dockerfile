@@ -26,6 +26,7 @@ ENV APP_ENV=${APP_ENV}
 WORKDIR /var/www/html
 
 COPY . .
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf \
     && sed -ri -e 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/*.conf /etc/apache2/apache2.conf
