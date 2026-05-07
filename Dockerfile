@@ -22,7 +22,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+
 COPY . .
+
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 RUN if [ ! -f .env ]; then cp .env.example .env; fi \
     && composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist \
