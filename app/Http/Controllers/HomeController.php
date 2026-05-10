@@ -13,7 +13,9 @@ class HomeController extends Controller
             ->where('month', $month)
             ->get();
 
-        $topRankers = $allRecords->sortByDesc(function($r) {
+        $topRankers = $allRecords->filter(function($r) {
+            return $r->employee && $r->employee->user && $r->employee->user->role !== 'admin';
+        })->sortByDesc(function($r) {
             return $r->final_score ?? $r->live_score ?? 0;
         })->take(3)->values();
 
@@ -26,6 +28,9 @@ class HomeController extends Controller
         $allRecords = \App\Models\PerformanceRecord::with('employee.user', 'employee.department')
             ->where('month', $month)
             ->get()
+            ->filter(function($r) {
+                return $r->employee && $r->employee->user && $r->employee->user->role !== 'admin';
+            })
             ->sortByDesc(function($r) {
                 return $r->final_score ?? $r->live_score ?? 0;
             })->values();

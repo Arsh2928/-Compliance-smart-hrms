@@ -5,6 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>@yield('title','Dashboard') - ComplianceSys</title>
+<script>
+  (function () {
+    const savedTheme = localStorage.getItem('compliancesys-theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', savedTheme || (prefersDark ? 'dark' : 'light'));
+  })();
+</script>
+<style>
+  html,
+  body {
+    background: #f8fafc;
+  }
+
+  html[data-theme="dark"],
+  html[data-theme="dark"] body {
+    background: #0b0f19;
+    color-scheme: dark;
+  }
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -52,23 +71,21 @@
     const root = document.documentElement;
     const toggle = document.getElementById('themeToggle');
     const icon = document.getElementById('themeToggleIcon');
-    const savedTheme = localStorage.getItem(storageKey);
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    function applyTheme(theme) {
-      root.setAttribute('data-theme', theme);
+    function updateIcon(theme) {
       if (icon) {
         icon.className = theme === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
       }
     }
 
-    applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+    updateIcon(root.getAttribute('data-theme'));
 
     if (toggle) {
       toggle.addEventListener('click', function () {
         const nextTheme = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         localStorage.setItem(storageKey, nextTheme);
-        applyTheme(nextTheme);
+        root.setAttribute('data-theme', nextTheme);
+        updateIcon(nextTheme);
       });
     }
   })();
@@ -112,6 +129,16 @@
         closeSidebar();
       }
     });
+  })();
+  (function() {
+    // Auto-dismiss alerts after 3 seconds
+    setTimeout(function() {
+      let alerts = document.querySelectorAll('.alert');
+      alerts.forEach(function(alert) {
+        let bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+      });
+    }, 3000);
   })();
 </script>
 @stack('scripts')

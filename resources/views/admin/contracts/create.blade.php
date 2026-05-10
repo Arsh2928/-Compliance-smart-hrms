@@ -4,13 +4,14 @@
 
 @section('content')
     <div class="mb-4">
-        <x-button href="{{ route('admin.contracts.index') }}" type="secondary" icon="bi bi-arrow-left">Back</x-button>
+@php $authRole = auth()->user()->role; @endphp
+        <x-button href="{{ $authRole === 'hr' ? route('hr.contracts.index') : route('admin.contracts.index') }}" type="secondary" icon="bi bi-arrow-left">Back</x-button>
     </div>
 
     <div class="row">
         <div class="col-md-8 mx-auto">
             <x-card title="New Employment Contract" icon="bi bi-file-earmark-text">
-                <form action="{{ route('admin.contracts.store') }}" method="POST">
+                <form action="{{ $authRole === 'hr' ? route('hr.contracts.store') : route('admin.contracts.store') }}" method="POST">
                     @csrf
                     
                     <div class="mb-3">

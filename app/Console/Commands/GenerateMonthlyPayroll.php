@@ -35,99 +35,105 @@ class GenerateMonthlyPayroll extends Command
 
     public function handle()
     {
-        $month = $this->option('month') ?: now()->subMonth()->month;
-        $year  = $this->option('year') ?: now()->subMonth()->year;
+        try {
+            $month = $this->option('month') ?: now()->subMonth()->month;
+            $year  = $this->option('year') ?: now()->subMonth()->year;
 
-        $date     = Carbon::create($year, $month, 1);
-        $monthStr = str_pad($month, 2, '0', STR_PAD_LEFT);
+            $date     = Carbon::create($year, $month, 1);
+            $monthStr = str_pad($month, 2, '0', STR_PAD_LEFT);
 
-        $this->info("Generating Payroll for $monthStr-$year...");
+            $this->info("Generating Payroll for $monthStr-$year...");
 
-        $contracts = Contract::with('employee.department')->where('status', 'active')->get();
+            $contracts = Contract::with('employee.department')->where('status', 'active')->get();
 
-        $count = 0;
-        foreach ($contracts as $contract) {
-            $employee = $contract->employee;
-            if (!$employee) continue;
+            $count = 0;
+            foreach ($contracts as $contract) {
+                $employee = $contract->employee;
+                if (!$employee) continue;
 
-            // Skip admin users
-            $user = $employee->user;
-            if (!$user || $user->role === 'admin') continue;
+                // Skip admin users
+                $user = $employee->user;
+                if (!$user || $user->role === 'admin') continue;
 
-            // Skip if payroll already exists for this month
-            $exists = Payroll::where('employee_id', $employee->id)
-                             ->where('month', (int)$month)
-                             ->where('year', (int)$year)
-                             ->exists();
-            if ($exists) {
-                $this->warn("Payroll already exists for {$employee->employee_code}");
-                continue;
-            }
+                // Skip if payroll already exists for this month
+                $exists = Payroll::where('employee_id', $employee->id)
+                                 ->where('month', (int)$month)
+                                 ->where('year', (int)$year)
+                                 ->exists();
+                if ($exists) {
+                    $this->warn("Payroll already exists for {$employee->employee_code}");
+                    continue;
+                }
 
-            // Attendance for the month
-            $startDate   = "$year-$monthStr-01";
-            $endDate     = Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
-            $attendances = Attendance::where('employee_id', $employee->id)
-                                     ->whereBetween('date', [$startDate, $endDate])
-                                     ->get();
+                // Attendance for the month
+                $startDate   = "$year-$monthStr-01";
+                $endDate     = Carbon::create($year, $month, 1)->endOfMonth()->format('Y-m-d');
+                $attendances = Attendance::where('employee_id', $employee->id)
+                                         ->whereBetween('date', [$startDate, $endDate])
+                                         ->get();
 
-            $workingDays = 22; // Standard working days assumption
-            $daysPresent = $attendances->count();
-            $basicSalary = $contract->basic_salary ?? 0;
-            $dailyRate   = $basicSalary / $workingDays;
+                $workingDays = 22; // Standard working days assumption
+                $daysPresent = $attendances->count();
+                $basicSalary = $contract->basic_salary ?? 0;
+                $dailyRate   = $basicSalary / $workingDays;
 
-            // Absent deduction
-            $absentDeduction = 0;
-            if ($daysPresent < $workingDays) {
-                $daysAbsent      = $workingDays - $daysPresent;
-                $absentDeduction = $daysAbsent * $dailyRate;
-            }
+                // Absent deduction
+                $absentDeduction = 0;
+                if ($daysPresent < $workingDays) {
+                    $daysAbsent      = $workingDays - $daysPresent;
+                    $absentDeduction = $daysAbsent * $dailyRate;
+                }
 
-            // Overtime calculation using department-specific rate
-            $totalHoursWorked = $attendances->sum('total_hours');
-            $expectedHours    = $daysPresent * 8;
-            $overtimeHours    = max(0, $totalHoursWorked - $expectedHours);
+                // Overtime calculation using department-specific rate
+                $totalHoursWorked = $attendances->sum('total_hours');
+                $expectedHours    = $daysPresent * 8;
+                $overtimeHours    = max(0, $totalHoursWorked - $expectedHours);
 
-            $deptName   = strtolower($employee->department->name ?? '');
-            $overtimeRate = $this->departmentOvertimeRates[$deptName] 
-                            ?? 900; // Default ₹900/hr for unlisted departments
-            $overtimePay  = round($overtimeHours * $overtimeRate, 2);
+                $deptName   = strtolower($employee->department->name ?? '');
+                $overtimeRate = $this->departmentOvertimeRates[$deptName]
+                                ?? 900; // Default ₹900/hr for unlisted departments
+                $overtimePay  = round($overtimeHours * $overtimeRate, 2);
 
-            // Tax deduction (10% of gross)
-            $gross   = $basicSalary + $overtimePay;
-            $taxDeduction = round($gross * $this->taxRate, 2);
+                // Tax deduction (10% of gross)
+                $gross   = $basicSalary + $overtimePay;
+                $taxDeduction = round($gross * $this->taxRate, 2);
 
-            // Total deductions = absent penalty + tax
-            $totalDeductions = round($absentDeduction + $taxDeduction, 2);
-            $netSalary       = round($gross - $totalDeductions, 2);
+                // Total deductions = absent penalty + tax
+                $totalDeductions = round($absentDeduction + $taxDeduction, 2);
+                $netSalary       = round($gross - $totalDeductions, 2);
 
-            Payroll::create([
-                'employee_id'    => $employee->id,
-                'month'          => (int)$month,
-                'year'           => (int)$year,
-                'basic_salary'   => round($basicSalary, 2),
-                'overtime_hours' => round($overtimeHours, 2),
-                'overtime_pay'   => $overtimePay,
-                'deductions'     => $totalDeductions,
-                'net_salary'     => $netSalary,
-                'status'         => 'pending',
-            ]);
-
-            // Notify employee of new payslip
-            if ($user) {
-                Alert::create([
-                    'user_id' => $user->id,
-                    'type'    => 'info',
-                    'message' => "Your payslip for " . Carbon::create()->month($month)->format('F') . " $year is ready. Net Salary: ₹" . number_format($netSalary, 2) . ". Status: Pending approval.",
-                    'is_read' => false,
-                    'link'    => '#',
+                Payroll::create([
+                    'employee_id'    => $employee->id,
+                    'month'          => (int)$month,
+                    'year'           => (int)$year,
+                    'basic_salary'   => round($basicSalary, 2),
+                    'overtime_hours' => round($overtimeHours, 2),
+                    'overtime_pay'   => $overtimePay,
+                    'deductions'     => $totalDeductions,
+                    'net_salary'     => $netSalary,
+                    'status'         => 'pending',
                 ]);
+
+                // Notify employee of new payslip
+                if ($user) {
+                    Alert::create([
+                        'user_id' => $user->id,
+                        'type'    => 'info',
+                        'message' => "Your payslip for " . Carbon::create()->month($month)->format('F') . " $year is ready. Net Salary: ₹" . number_format($netSalary, 2) . ". Status: Pending approval.",
+                        'is_read' => false,
+                        'link'    => '#',
+                    ]);
+                }
+
+                $this->info("Generated payroll for {$employee->employee_code} — Net: ₹{$netSalary}");
+                $count++;
             }
 
-            $this->info("Generated payroll for {$employee->employee_code} — Net: ₹{$netSalary}");
-            $count++;
+            $this->info("Successfully generated $count payroll records.");
+        } catch (\Exception $e) {
+            $this->error('MongoDB connection failed — could not generate payroll: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('[GenerateMonthlyPayroll] MongoDB error: ' . $e->getMessage());
+            return self::FAILURE;
         }
-
-        $this->info("Successfully generated $count payroll records.");
     }
 }

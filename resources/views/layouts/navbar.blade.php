@@ -33,16 +33,22 @@
             }
           @endphp
 
-          <li class="nav-item dropdown pe-2 d-flex align-items-center">
-            <a href="#" class="nav-link text-body p-0 position-relative" data-bs-toggle="dropdown" aria-expanded="false">
+          <li class="nav-item dropdown pe-2 d-flex align-items-center ui-notification-dropdown">
+            <button type="button"
+                    class="nav-link text-body p-0 position-relative ui-notification-toggle"
+                    id="notificationDropdownToggle"
+                    data-bs-toggle="dropdown"
+                    data-bs-auto-close="outside"
+                    aria-expanded="false"
+                    aria-label="Notifications">
               <i class="bi bi-bell-fill cursor-pointer"></i>
               @if($unreadCount > 0)
                 <span class="position-absolute badge bg-danger rounded-pill ui-nav-badge">
                   {{ $unreadCount }}
                 </span>
               @endif
-            </a>
-            <div class="dropdown-menu dropdown-menu-end px-2 py-3 shadow-lg border-0 ui-nav-dropdown">
+            </button>
+            <div class="dropdown-menu dropdown-menu-end px-2 py-3 shadow-lg border-0 ui-nav-dropdown" aria-labelledby="notificationDropdownToggle">
               <div class="d-flex justify-content-between align-items-center px-2 mb-2">
                 <h6 class="text-uppercase text-xs font-weight-bolder opacity-7 mb-0">Notifications</h6>
                 @if($unreadCount > 0)

@@ -10,9 +10,15 @@ use Illuminate\Support\Str;
 
 class ComplaintController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $complaints = Complaint::with('user')->latest()->paginate(10);
+        $query = Complaint::with('user')->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $complaints = $query->paginate(15);
         return view('admin.complaints.index', compact('complaints'));
     }
 

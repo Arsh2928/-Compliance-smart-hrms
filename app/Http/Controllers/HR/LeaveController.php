@@ -9,9 +9,15 @@ use Illuminate\Http\Request;
 
 class LeaveController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $leaves = Leave::with('employee.user')->latest()->paginate(10);
+        $query = Leave::with('employee.user')->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $leaves = $query->paginate(15);
         return view('admin.leaves.index', compact('leaves'));
     }
 

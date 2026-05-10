@@ -11,7 +11,15 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table leave-table">
+        <table class="table leave-table" style="table-layout:fixed; width:100%;">
+            <colgroup>
+                <col style="width:160px;">{{-- Employee --}}
+                <col style="width:90px;">{{-- Type --}}
+                <col style="width:210px;">{{-- Duration --}}
+                <col>{{-- Reason: remaining space --}}
+                <col style="width:110px;">{{-- Status --}}
+                <col style="width:170px;">{{-- Actions --}}
+            </colgroup>
             <thead>
                 <tr>
                     <th>Employee</th>
@@ -26,7 +34,7 @@
                 @forelse($leaves as $leave)
                 <tr>
                     <td>
-                        <div class="fw-semibold" style="font-size:0.87rem;">
+                        <div class="fw-semibold" style="font-size:0.87rem; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">
                             {{ $leave->employee->user->name ?? 'Unknown' }}
                         </div>
                         <div class="text-muted" style="font-size:0.75rem;">
@@ -39,9 +47,10 @@
                         <i class="bi bi-arrow-right text-muted mx-1"></i>
                         {{ \Carbon\Carbon::parse($leave->end_date)->format('M d, Y') }}
                     </td>
-                    <td class="table-text-cell">
-                        <span class="table-truncate" title="{{ $leave->reason }}">
-                            {{ Str::limit($leave->reason, 35) }}
+                    <td style="max-width:0; overflow:hidden;">
+                        <span style="display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--app-muted); font-size:0.85rem;"
+                              title="{{ $leave->reason }}">
+                            {{ $leave->reason }}
                         </span>
                     </td>
                     <td class="table-status-cell">

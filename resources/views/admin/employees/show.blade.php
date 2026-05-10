@@ -30,7 +30,7 @@
                 </li>
                 <li class="list-group-item d-flex justify-content-between px-3">
                     <span class="text-muted">Phone</span>
-                    <strong>{{ $employee->phone ?? '—' }}</strong>
+                    <strong>{{ $employee->user->phone ?? '—' }}</strong>
                 </li>
                 <li class="list-group-item d-flex justify-content-between px-3">
                     <span class="text-muted">Joined</span>
@@ -84,7 +84,7 @@
                                 @forelse($employee->performanceRecords->sortByDesc('month') as $perf)
                                 <tr>
                                     <td>{{ $perf->month }}</td>
-                                    <td>{{ $perf->final_score }}</td>
+                                    <td>{{ round($perf->final_score ?? $perf->live_score ?? 0, 1) }}</td>
                                     <td>#{{ $perf->rank ?? '—' }}</td>
                                     <td>{{ $perf->reward_tier ?? '—' }}</td>
                                 </tr>

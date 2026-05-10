@@ -69,7 +69,7 @@
 <div class="card">
     <div class="card-body pb-0">
         {{-- Search / Filter --}}
-        <form action="{{ route('admin.employees.index') }}" method="GET" class="row g-2 mb-3">
+        <form action="{{ $authRole === 'hr' ? route('hr.employees.index') : route('admin.employees.index') }}" method="GET" class="row g-2 mb-3">
             <div class="col-md-5">
                 <div class="input-group">
                     <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
@@ -91,7 +91,7 @@
                 <button type="submit" class="btn btn-primary flex-fill">
                     <i class="bi bi-funnel me-1"></i>Filter
                 </button>
-                <a href="{{ route('admin.employees.index') }}" class="btn btn-outline-secondary">Reset</a>
+                <a href="{{ $authRole === 'hr' ? route('hr.employees.index') : route('admin.employees.index') }}" class="btn btn-outline-secondary">Reset</a>
             </div>
         </form>
     </div>
@@ -124,7 +124,7 @@
                         </div>
                     </td>
                     <td>{{ $employee->department->name ?? '—' }}</td>
-                    <td>{{ $employee->phone ?? '—' }}</td>
+                    <td>{{ $employee->user->phone ?? '—' }}</td>
                     <td>
                         @php $employeeRole = $employee->user->role ?? 'employee'; @endphp
                         <span class="badge bg-{{ $employeeRole === 'admin' ? 'danger' : ($employeeRole === 'hr' ? 'warning' : 'success') }}">

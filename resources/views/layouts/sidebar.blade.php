@@ -18,13 +18,15 @@
         @php
           $role = auth()->user()->role;
 
-          function sideLink($label, $icon, $href, $active) {
-            $cls = $active ? 'active shadow' : '';
-            return '<li class="nav-item"><a class="nav-link '.$cls.'" href="'.$href.'">
-              <div class="text-center me-2 d-flex align-items-center justify-content-center ui-sidenav-icon">
-                <i class="bi '.$icon.'"></i>
-              </div>
-              <span class="nav-link-text ms-1">'.$label.'</span></a></li>';
+          if (!function_exists('sideLink')) {
+            function sideLink($label, $icon, $href, $active) {
+              $cls = $active ? 'active shadow' : '';
+              return '<li class="nav-item"><a class="nav-link '.$cls.'" href="'.$href.'">
+                <div class="text-center me-2 d-flex align-items-center justify-content-center ui-sidenav-icon">
+                  <i class="bi '.$icon.'"></i>
+                </div>
+                <span class="nav-link-text ms-1">'.$label.'</span></a></li>';
+            }
           }
         @endphp
 

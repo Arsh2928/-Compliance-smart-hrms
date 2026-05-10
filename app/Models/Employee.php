@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\SyncTracking;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Eloquent\Model;
 use App\Traits\LogsActivity;
 
 class Employee extends Model
 {
+    use SyncTracking;
     use HasFactory, LogsActivity;
 
     protected $connection = 'mongodb';
@@ -39,8 +42,23 @@ class Employee extends Model
     public function contracts()   { return $this->hasMany(Contract::class); }
     public function alerts()      { return $this->hasMany(Alert::class); }
     public function performanceRecords() { return $this->hasMany(PerformanceRecord::class); }
-    public function ratings()     { return $this->hasMany(Rating::class, 'evaluatee_id'); }
+    public function ratings()     { return $this->hasMany(Rating::class, 'employee_id'); }
     public function tasks()       { return $this->hasMany(Task::class); }
 
     public function getRouteKeyName(): string { return '_id'; }
+
+    protected static function booted()
+    {
+        static::deleting(function ($employee) {
+            \App\Models\Attendance::where('employee_id', $employee->id)->delete();
+            \App\Models\Leave::where('employee_id', $employee->id)->delete();
+            \App\Models\Payroll::where('employee_id', $employee->id)->delete();
+            \App\Models\Contract::where('employee_id', $employee->id)->delete();
+            \App\Models\Alert::where('user_id', $employee->user_id)->delete(); // Cleanup employee's alerts just in case
+            \App\Models\PerformanceRecord::where('employee_id', $employee->id)->delete();
+            \App\Models\Rating::where('employee_id', $employee->id)->delete();
+            \App\Models\Task::where('employee_id', $employee->id)->delete();
+            \App\Models\MonthlyReward::where('employee_id', $employee->id)->delete();
+        });
+    }
 }

@@ -36,8 +36,8 @@
             </div>
         </div>
     </div>
-    <div class="card-body p-4 bg-light">
-        <div class="message-body" style="white-space: pre-wrap; font-size: 1rem; line-height: 1.6; color: #334155;">{{ $message->body }}</div>
+    <div class="card-body p-4" style="background: rgba(128, 128, 128, 0.05); border-top: 1px solid rgba(128, 128, 128, 0.1); border-bottom: 1px solid rgba(128, 128, 128, 0.1);">
+        <div class="message-body" style="white-space: pre-wrap; font-size: 1.05rem; line-height: 1.6;">{{ $message->body }}</div>
     </div>
     
     @if(session('success'))

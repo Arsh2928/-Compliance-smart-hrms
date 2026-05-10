@@ -140,12 +140,12 @@
                 @if(isset($aiInsights) && count($aiInsights) > 0)
                     <div class="d-flex flex-column gap-3">
                         @foreach($aiInsights as $insight)
-                            <div class="d-flex align-items-start gap-3 p-3 rounded" style="background-color: {{ $insight['type'] === 'danger' ? '#fef2f2' : ($insight['type'] === 'warning' ? '#fffbeb' : ($insight['type'] === 'info' ? '#eff6ff' : '#f0fdf4')) }}; border-left: 3px solid {{ $insight['type'] === 'danger' ? '#ef4444' : ($insight['type'] === 'warning' ? '#f59e0b' : ($insight['type'] === 'info' ? '#3b82f6' : '#10b981')) }};">
+                            <div class="d-flex align-items-start gap-3 p-3 rounded border" style="border-left: 4px solid {{ $insight['type'] === 'danger' ? '#ef4444' : ($insight['type'] === 'warning' ? '#f59e0b' : ($insight['type'] === 'info' ? '#3b82f6' : '#10b981')) }} !important;">
                                 <div class="fs-4 text-{{ $insight['type'] === 'danger' ? 'danger' : ($insight['type'] === 'warning' ? 'warning' : ($insight['type'] === 'info' ? 'primary' : 'success')) }}" style="margin-top: -4px;">
                                     <i class="bi {{ $insight['icon'] }}"></i>
                                 </div>
                                 <div>
-                                    <h6 class="fw-bold mb-1 text-dark" style="font-size: 0.88rem;">{{ $insight['title'] }}</h6>
+                                    <h6 class="fw-bold mb-1" style="font-size: 0.88rem;">{{ $insight['title'] }}</h6>
                                     <p class="mb-0 text-muted" style="font-size: 0.8rem; line-height: 1.4;">{{ $insight['message'] }}</p>
                                 </div>
                             </div>

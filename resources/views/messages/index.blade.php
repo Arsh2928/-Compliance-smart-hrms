@@ -37,8 +37,8 @@
                             </div>
                         </td>
                         <td>
-                            <a href="{{ route('messages.show', $msg) }}" class="text-decoration-none text-dark {{ $msg->is_read ? '' : 'fw-bold' }}">
-                                {{ \Illuminate\Support\Str::limit($msg->subject, 40) }}
+                            <a href="{{ route('messages.show', $msg) }}" class="text-decoration-none {{ $msg->is_read ? 'text-secondary' : 'fw-bold text-primary' }}">
+                                {{ \Illuminate\Support\Str::limit($msg->subject, 60) }}
                             </a>
                         </td>
                         <td class="text-muted small">

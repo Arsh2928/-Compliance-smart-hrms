@@ -9,11 +9,18 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $totalEmployees = \App\Models\Employee::whereHas('user', function($q) {
-            $q->where('role', '!=', 'admin');
-        })->count();
-        $todayStr         = today()->format('Y-m-d');
-        $attendanceToday  = \App\Models\Attendance::where('date', $todayStr)->count();
+        // Only count actual employees (exclude admin and HR roles)
+        $employeeOnlyUserIds = \App\Models\User::where('role', 'employee')->pluck('id')->map(fn($id) => (string)$id);
+        $employeeOnlyEmpIds  = \App\Models\Employee::whereIn('user_id', $employeeOnlyUserIds)->pluck('id')->map(fn($id) => (string)$id);
+
+        $totalEmployees  = $employeeOnlyEmpIds->count();
+        $todayStr        = today()->format('Y-m-d');
+
+        // Present today = only employee-role users (not HR/Admin)
+        $attendanceToday = \App\Models\Attendance::where('date', $todayStr)
+            ->whereIn('employee_id', $employeeOnlyEmpIds)
+            ->count();
+
         $pendingLeaves    = \App\Models\Leave::where('status', 'pending')->count();
         $openComplaints   = \App\Models\Complaint::whereIn('status', ['open', 'pending'])->count();
         $complianceAlerts = \App\Models\Alert::where('is_read', false)->count();

@@ -18,12 +18,12 @@ class Money
             $fmt->setAttribute(NumberFormatter::FRACTION_DIGITS, $decimals);
             $formatted = $fmt->formatCurrency($value, 'INR');
             if (is_string($formatted) && $formatted !== '') {
-                return $formatted;
+                return str_replace('₹', 'Rs. ', $formatted);
             }
         }
 
         // Fallback (if intl is not enabled)
-        return '₹' . number_format($value, $decimals);
+        return 'Rs. ' . number_format($value, $decimals);
     }
 }
 

@@ -25,66 +25,72 @@ class AutoAssignTasks extends Command
      */
     public function handle()
     {
-        $employees = Employee::all();
-        $adminId = User::where('role', 'admin')->first()->id ?? null;
+        try {
+            $employees = Employee::all();
+            $adminId = User::where('role', 'admin')->first()->id ?? null;
 
-        $taskNames = [
-            'Submit Weekly Status Report',
-            'Update Client Logs',
-            'Attend Team Sync',
-            'Code Review / QA Assessment',
-            'Update Compliance Documentation',
-            'Clear Support Ticket Backlog',
-            'Prepare Month-End Analytics',
-        ];
+            $taskNames = [
+                'Submit Weekly Status Report',
+                'Update Client Logs',
+                'Attend Team Sync',
+                'Code Review / QA Assessment',
+                'Update Compliance Documentation',
+                'Clear Support Ticket Backlog',
+                'Prepare Month-End Analytics',
+            ];
 
-        $now = now();
-        $weeks = $this->option('historical') ? 24 : 1; // Generate for last 24 weeks or just current week
-        $count = 0;
+            $now = now();
+            $weeks = $this->option('historical') ? 24 : 1; // Generate for last 24 weeks or just current week
+            $count = 0;
 
-        foreach ($employees as $employee) {
-            for ($i = 0; $i < $weeks; $i++) {
-                $weekStart = $now->copy()->subWeeks($i)->startOfWeek();
-                $deadline = $weekStart->copy()->addDays(4)->endOfDay(); // Friday end of day
-                
-                // Pick 2 random tasks
-                $tasksToAssign = array_rand(array_flip($taskNames), 2);
-                
-                foreach ($tasksToAssign as $title) {
-                    // Check if a task with similar title and deadline already exists to avoid duplicates
-                    $exists = Task::where('employee_id', $employee->id)
-                        ->where('title', $title)
-                        ->whereBetween('deadline', [
-                            $deadline->copy()->startOfDay(), 
-                            $deadline->copy()->endOfDay()
-                        ])
-                        ->exists();
+            foreach ($employees as $employee) {
+                for ($i = 0; $i < $weeks; $i++) {
+                    $weekStart = $now->copy()->subWeeks($i)->startOfWeek();
+                    $deadline = $weekStart->copy()->addDays(4)->endOfDay(); // Friday end of day
 
-                    if ($exists) continue;
+                    // Pick 2 random tasks
+                    $tasksToAssign = array_rand(array_flip($taskNames), 2);
 
-                    // Assume 90% completion on time, 10% missed/late
-                    $isLate = rand(1, 100) <= 10;
-                    
-                    if ($isLate) {
-                        $completedAt = $deadline->copy()->addDays(rand(1, 3));
-                    } else {
-                        $completedAt = $deadline->copy()->subHours(rand(1, 48));
+                    foreach ($tasksToAssign as $title) {
+                        // Check if a task with similar title and deadline already exists to avoid duplicates
+                        $exists = Task::where('employee_id', $employee->id)
+                            ->where('title', $title)
+                            ->whereBetween('deadline', [
+                                $deadline->copy()->startOfDay(),
+                                $deadline->copy()->endOfDay()
+                            ])
+                            ->exists();
+
+                        if ($exists) continue;
+
+                        // Assume 90% completion on time, 10% missed/late
+                        $isLate = rand(1, 100) <= 10;
+
+                        if ($isLate) {
+                            $completedAt = $deadline->copy()->addDays(rand(1, 3));
+                        } else {
+                            $completedAt = $deadline->copy()->subHours(rand(1, 48));
+                        }
+
+                        Task::create([
+                            'employee_id'  => $employee->id,
+                            'assigned_by'  => $adminId,
+                            'title'        => $title,
+                            'description'  => 'Automated recurring task.',
+                            'status'       => 'completed',
+                            'deadline'     => $deadline,
+                            'completed_at' => $completedAt,
+                        ]);
+                        $count++;
                     }
-                    
-                    Task::create([
-                        'employee_id'  => $employee->id,
-                        'assigned_by'  => $adminId,
-                        'title'        => $title,
-                        'description'  => 'Automated recurring task.',
-                        'status'       => 'completed',
-                        'deadline'     => $deadline,
-                        'completed_at' => $completedAt,
-                    ]);
-                    $count++;
                 }
             }
-        }
 
-        $this->info("Successfully generated and completed {$count} automated tasks.");
+            $this->info("Successfully generated and completed {$count} automated tasks.");
+        } catch (\Exception $e) {
+            $this->error('MongoDB connection failed — could not auto-assign tasks: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('[AutoAssignTasks] MongoDB error: ' . $e->getMessage());
+            return self::FAILURE;
+        }
     }
 }

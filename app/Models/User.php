@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\SyncTracking;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 use MongoDB\Laravel\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
+    use SyncTracking;
     use HasFactory, Notifiable;
 
     protected $connection = 'mongodb';
@@ -17,6 +20,7 @@ class User extends Authenticatable
         'name',
         'email',
         'phone',
+        'address',
         'email_verified_at',
         'password',
         'role',
@@ -46,4 +50,18 @@ class User extends Authenticatable
     public function isAdmin() { return $this->role === 'admin'; }
     public function isHr() { return $this->role === 'hr'; }
     public function isEmployee() { return $this->role === 'employee'; }
+
+    protected static function booted()
+    {
+        static::deleting(function ($user) {
+            if ($user->employee) {
+                $user->employee->delete();
+            }
+            \App\Models\Complaint::where('user_id', $user->id)->delete();
+            \App\Models\Alert::where('user_id', $user->id)->delete();
+            \App\Models\Message::where('sender_id', $user->id)->orWhere('receiver_id', $user->id)->delete();
+            \App\Models\ActivityLog::where('user_id', $user->id)->delete();
+            \App\Models\Rating::where('evaluator_id', $user->id)->delete();
+        });
+    }
 }

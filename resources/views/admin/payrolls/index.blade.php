@@ -107,7 +107,7 @@
                     <td colspan="8">
                         <div class="empty-state">
                             <i class="bi bi-cash-stack"></i>
-                            <p>No payroll records yet. <a href="{{ route('admin.payrolls.create') }}">Generate one now</a>.</p>
+                            <p>No payroll records yet. <a href="{{ auth()->user()->role === 'admin' ? route('admin.payrolls.create') : route('hr.payrolls.create') }}">Generate one now</a>.</p>
                         </div>
                     </td>
                 </tr>

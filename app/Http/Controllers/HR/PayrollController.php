@@ -9,9 +9,21 @@ use Illuminate\Http\Request;
 
 class PayrollController extends Controller
 {
-    public function index()
+    public function index(\Illuminate\Http\Request $request)
     {
-        $payrolls = Payroll::with('employee.user')->latest()->paginate(10);
+        $query = Payroll::with('employee.user')->latest();
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('month')) {
+            $query->where('month', (int) $request->month);
+        }
+        if ($request->filled('year')) {
+            $query->where('year', (int) $request->year);
+        }
+
+        $payrolls = $query->paginate(15);
         return view('admin.payrolls.index', compact('payrolls'));
     }
 

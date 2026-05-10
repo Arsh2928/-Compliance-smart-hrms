@@ -353,6 +353,18 @@ textarea.form-control {
     box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.2);
 }
 
+[data-theme="dark"] select option {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .form-control:disabled,
+[data-theme="dark"] .form-control[readonly] {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 .form-check {
     display: flex;
     align-items: center;

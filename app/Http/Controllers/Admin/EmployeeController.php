@@ -66,9 +66,11 @@ class EmployeeController extends Controller
             $employeeCode = 'EMP-' . strtoupper(substr(uniqid(), -6));
         }
 
-        $user = User::create([
+        $user = \App\Models\User::create([
             'name'     => $request->name,
             'email'    => $request->email,
+            'phone'    => $request->phone,
+            'address'  => $request->address,
             'password' => bcrypt('password123'),
             'role'     => $request->role,
             'status'   => 'approved',
@@ -78,8 +80,6 @@ class EmployeeController extends Controller
             'user_id'       => $user->id,
             'department_id' => $request->department_id,
             'employee_code' => $employeeCode,
-            'phone'         => $request->phone,
-            'address'       => $request->address,
             'joined_date'   => $request->joined_date,
         ]);
 
@@ -136,12 +136,14 @@ class EmployeeController extends Controller
         }
 
         $employee->user->update([
-            'name'  => $request->name,
-            'email' => $request->email,
-            'role'  => $request->role,
+            'name'    => $request->name,
+            'email'   => $request->email,
+            'phone'   => $request->phone,
+            'address' => $request->address,
+            'role'    => $request->role,
         ]);
 
-        $employee->update($request->only('department_id', 'phone', 'address'));
+        $employee->update($request->only('department_id'));
 
         return redirect()->route('admin.employees.index')
             ->with('success', 'Employee updated successfully.');

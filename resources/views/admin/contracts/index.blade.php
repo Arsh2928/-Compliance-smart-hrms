@@ -4,7 +4,8 @@
 @section('content')
 <div class="page-header">
     <h4><i class="bi bi-file-earmark-text-fill me-2 text-info"></i>Employee Contracts</h4>
-    <a href="{{ route('admin.contracts.create') }}" class="btn btn-primary">
+@php $authRole = auth()->user()->role; @endphp
+    <a href="{{ $authRole === 'hr' ? route('hr.contracts.create') : route('admin.contracts.create') }}" class="btn btn-primary">
         <i class="bi bi-plus-lg me-2"></i>Add Contract
     </a>
 </div>
@@ -27,20 +28,20 @@
                     $isExpiring = \Carbon\Carbon::parse($contract->end_date)->isBefore(now()->addDays(30))
                                   && $contract->status === 'active';
                 @endphp
-                <tr class="{{ $isExpiring ? 'table-warning' : '' }}">
-                    <td>
+                <tr style="{{ $isExpiring ? 'background-color: rgba(220, 53, 69, 0.15);' : '' }}">
+                    <td style="{{ $isExpiring ? 'background-color: transparent;' : '' }}">
                         <div class="fw-semibold" style="font-size:0.87rem;">
                             {{ $contract->employee->user->name ?? 'Unknown' }}
                         </div>
                     </td>
-                    <td>{{ \Carbon\Carbon::parse($contract->start_date)->format('M d, Y') }}</td>
-                    <td>
+                    <td style="{{ $isExpiring ? 'background-color: transparent;' : '' }}">{{ \Carbon\Carbon::parse($contract->start_date)->format('M d, Y') }}</td>
+                    <td style="{{ $isExpiring ? 'background-color: transparent;' : '' }}">
                         {{ \Carbon\Carbon::parse($contract->end_date)->format('M d, Y') }}
                         @if($isExpiring)
                             <span class="badge bg-danger ms-1">Expiring Soon</span>
                         @endif
                     </td>
-                    <td class="table-status-cell">
+                    <td class="table-status-cell" style="{{ $isExpiring ? 'background-color: transparent;' : '' }}">
                         @if($contract->status === 'active')
                             <span class="badge bg-success">Active</span>
                         @elseif($contract->status === 'expired')
@@ -49,7 +50,7 @@
                             <span class="badge bg-secondary">Terminated</span>
                         @endif
                     </td>
-                    <td class="contract-actions-cell">
+                    <td class="contract-actions-cell" style="{{ $isExpiring ? 'background-color: transparent;' : '' }}">
                         @php
                             $isOwnContract = $contract->employee && $contract->employee->user_id === auth()->id();
                             $editRoute = auth()->user()->role === 'admin' 
@@ -73,7 +74,7 @@
                     <td colspan="5">
                         <div class="empty-state">
                             <i class="bi bi-file-earmark-x"></i>
-                            <p>No contracts found. <a href="{{ route('admin.contracts.create') }}">Add one now</a>.</p>
+                            <p>No contracts found. <a href="{{ $authRole === 'hr' ? route('hr.contracts.create') : route('admin.contracts.create') }}">Add one now</a>.</p>
                         </div>
                     </td>
                 </tr>

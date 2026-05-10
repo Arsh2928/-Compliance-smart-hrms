@@ -25,30 +25,36 @@ class SyncLiveScores extends Command
      */
     public function handle(ScoringService $scoringService)
     {
-        $currentMonth = now()->format('Y-m');
-        $employees = Employee::all();
-        
-        $count = 0;
-        foreach ($employees as $employee) {
-            $result = $scoringService->computeScore($employee, $currentMonth);
-            
-            $record = PerformanceRecord::firstOrNew([
-                'employee_id' => $employee->id,
-                'month'       => $currentMonth
-            ]);
-            
-            $record->live_score = $result['live_score'];
-            $record->components = $result['components'];
-            $record->flags      = $result['flags'];
-            
-            // Do not overwrite final_score if it exists (though it shouldn't for ongoing month)
-            $record->save();
-            $count++;
+        try {
+            $currentMonth = now()->format('Y-m');
+            $employees = Employee::all();
+
+            $count = 0;
+            foreach ($employees as $employee) {
+                $result = $scoringService->computeScore($employee, $currentMonth);
+
+                $record = PerformanceRecord::firstOrNew([
+                    'employee_id' => $employee->id,
+                    'month'       => $currentMonth
+                ]);
+
+                $record->live_score = $result['live_score'];
+                $record->components = $result['components'];
+                $record->flags      = $result['flags'];
+
+                // Do not overwrite final_score if it exists (though it shouldn't for ongoing month)
+                $record->save();
+                $count++;
+            }
+
+            // Clear leaderboard caches so it reflects new data instantly
+            Cache::flush();
+
+            $this->info("Successfully synced live scores for {$count} employees.");
+        } catch (\Exception $e) {
+            $this->error('MongoDB connection failed — could not sync live scores: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('[SyncLiveScores] MongoDB error: ' . $e->getMessage());
+            return self::FAILURE;
         }
-
-        // Clear leaderboard caches so it reflects new data instantly
-        Cache::flush();
-
-        $this->info("Successfully synced live scores for {$count} employees.");
     }
 }

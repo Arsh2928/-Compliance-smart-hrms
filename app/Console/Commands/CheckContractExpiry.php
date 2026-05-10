@@ -16,41 +16,47 @@ class CheckContractExpiry extends Command
 
     public function handle()
     {
-        $this->info('Checking for expiring contracts...');
+        try {
+            $this->info('Checking for expiring contracts...');
 
-        // Contracts expiring in exactly 30 days
-        $targetDate = Carbon::today()->addDays(30)->toDateString();
+            // Contracts expiring in exactly 30 days
+            $targetDate = Carbon::today()->addDays(30)->toDateString();
 
-        $expiringContracts = Contract::with('employee.user')
-            ->where('status', 'active')
-            ->where('end_date', $targetDate)
-            ->get();
+            $expiringContracts = Contract::with('employee.user')
+                ->where('status', 'active')
+                ->where('end_date', $targetDate)
+                ->get();
 
-        if ($expiringContracts->isEmpty()) {
-            $this->info('No contracts expiring in 30 days.');
+            if ($expiringContracts->isEmpty()) {
+                $this->info('No contracts expiring in 30 days.');
+                return self::SUCCESS;
+            }
+
+            // Get HR & Admin emails
+            $notifiableEmails = User::whereIn('role', ['admin', 'hr'])
+                ->where('status', 'approved')
+                ->pluck('email')
+                ->toArray();
+
+            if (empty($notifiableEmails)) {
+                $this->warn('No admin/hr emails found to notify.');
+                return self::FAILURE;
+            }
+
+            foreach ($expiringContracts as $contract) {
+                try {
+                    Mail::to($notifiableEmails)->send(new ContractExpiryMail($contract));
+                    $this->info("Notified admins about contract expiry for: {$contract->employee->employee_code}");
+                } catch (\Exception $e) {
+                    $this->error("Failed to send email for {$contract->id}: " . $e->getMessage());
+                }
+            }
+
             return self::SUCCESS;
-        }
-
-        // Get HR & Admin emails
-        $notifiableEmails = User::whereIn('role', ['admin', 'hr'])
-            ->where('status', 'approved')
-            ->pluck('email')
-            ->toArray();
-
-        if (empty($notifiableEmails)) {
-            $this->warn('No admin/hr emails found to notify.');
+        } catch (\Exception $e) {
+            $this->error('MongoDB connection failed — could not check contracts: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('[CheckContractExpiry] MongoDB error: ' . $e->getMessage());
             return self::FAILURE;
         }
-
-        foreach ($expiringContracts as $contract) {
-            try {
-                Mail::to($notifiableEmails)->send(new ContractExpiryMail($contract));
-                $this->info("Notified admins about contract expiry for: {$contract->employee->employee_code}");
-            } catch (\Exception $e) {
-                $this->error("Failed to send email for {$contract->id}: " . $e->getMessage());
-            }
-        }
-
-        return self::SUCCESS;
     }
 }

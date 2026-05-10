@@ -4,13 +4,14 @@
 
 @section('content')
     <div class="mb-4">
-        <x-button href="{{ route('admin.employees.index') }}" type="secondary" icon="bi bi-arrow-left">Back</x-button>
+@php $authRole = auth()->user()->role; @endphp
+        <x-button href="{{ $authRole === 'hr' ? route('hr.employees.index') : route('admin.employees.index') }}" type="secondary" icon="bi bi-arrow-left">Back</x-button>
     </div>
 
     <div class="row">
         <div class="col-md-8 mx-auto">
             <x-card title="Edit Details: {{ $employee->user->name }}" icon="bi bi-pencil-square">
-                <form action="{{ route('admin.employees.update', $employee) }}" method="POST">
+                <form action="{{ $authRole === 'hr' ? route('hr.employees.update', $employee) : route('admin.employees.update', $employee) }}" method="POST">
                     @csrf
                     @method('PUT')
                     
@@ -30,7 +31,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-bold">Employee Code</label>
-                            <input type="text" class="form-control bg-light" value="{{ $employee->employee_code }}" readonly>
+                            <input type="text" class="form-control" value="{{ $employee->employee_code }}" readonly>
                             <small class="text-muted">Code cannot be changed.</small>
                         </div>
                         <div class="col-md-4">
@@ -56,18 +57,18 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Phone Number</label>
-                            <input type="text" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone', $employee->phone) }}">
+                            <input type="text" name="phone" class="form-control @error('phone') is-invalid @enderror" value="{{ old('phone', $employee->user->phone ?? '') }}">
                             @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Joined Date</label>
-                            <input type="date" class="form-control bg-light" value="{{ $employee->joined_date }}" readonly>
+                            <input type="date" class="form-control" value="{{ \Carbon\Carbon::parse($employee->joined_date)->format('Y-m-d') }}" readonly>
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label fw-bold">Address</label>
-                        <textarea name="address" rows="3" class="form-control @error('address') is-invalid @enderror">{{ old('address', $employee->address) }}</textarea>
+                        <textarea name="address" rows="3" class="form-control @error('address') is-invalid @enderror">{{ old('address', $employee->user->address ?? '') }}</textarea>
                         @error('address') <div class="invalid-feedback">{{ $message }}</div> @enderror
                     </div>
 

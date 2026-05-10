@@ -113,9 +113,9 @@
                 </div>
                 <div class="modal-body">
                     {{-- Complaint preview card --}}
-                    <div class="p-3 mb-3 rounded" style="background:#f8f9fb;border:1px solid #e5e7eb;">
+                    <div class="p-3 mb-3 rounded" style="background: rgba(128, 128, 128, 0.1); border: 1px solid rgba(128, 128, 128, 0.2);">
                         <div class="fw-bold mb-1" id="modalComplaintTitle" style="font-size:0.92rem;"></div>
-                        <p class="mb-0 text-muted" id="modalComplaintDesc" style="font-size:0.82rem;"></p>
+                        <p class="mb-0 opacity-7" id="modalComplaintDesc" style="font-size:0.82rem;"></p>
                     </div>
 
                     <div class="mb-3">

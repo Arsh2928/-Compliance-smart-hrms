@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\SyncTracking;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use MongoDB\Laravel\Eloquent\Model;
 
 class Payroll extends Model
 {
+    use SyncTracking;
     use HasFactory;
 
     protected $connection = 'mongodb';

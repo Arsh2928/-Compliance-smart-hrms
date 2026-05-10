@@ -114,10 +114,18 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        // ── LOCAL MongoDB (default — used by the app, works offline) ──────
         'mongodb' => [
-            'driver' => 'mongodb',
-            'dsn' => env('MONGODB_URI', 'mongodb://127.0.0.1:27017'),
+            'driver'   => 'mongodb',
+            'dsn'      => env('MONGODB_URI', 'mongodb://127.0.0.1:27017'),
             'database' => env('MONGODB_DATABASE', 'labour_compliance'),
+        ],
+
+        // ── ATLAS MongoDB (ONLY used by: php artisan mongo:sync-atlas) ────
+        'mongodb_atlas' => [
+            'driver'   => 'mongodb',
+            'dsn'      => env('MONGODB_URI_ATLAS'),
+            'database' => env('MONGODB_DATABASE_ATLAS', 'labour_compliance'),
         ],
 
     ],

@@ -11,7 +11,14 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table leave-table">
+        <table class="table leave-table" style="table-layout:fixed; width:100%;">
+            <colgroup>
+                <col style="width:100px;">
+                <col style="width:190px;">
+                <col>{{-- Reason: takes remaining space --}}
+                <col style="width:120px;">
+                <col style="width:130px;">
+            </colgroup>
             <thead>
                 <tr>
                     <th>Type</th>
@@ -30,9 +37,10 @@
                         <i class="bi bi-arrow-right text-muted mx-1"></i>
                         {{ \Carbon\Carbon::parse($leave->end_date)->format('M d, Y') }}
                     </td>
-                    <td class="table-text-cell">
-                        <span class="table-truncate" title="{{ $leave->reason }}">
-                            {{ Str::limit($leave->reason, 45) }}
+                    <td style="max-width:0; overflow:hidden;">
+                        <span style="display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--app-muted); font-size:0.85rem;"
+                              title="{{ $leave->reason }}">
+                            {{ $leave->reason }}
                         </span>
                     </td>
                     <td class="table-status-cell">

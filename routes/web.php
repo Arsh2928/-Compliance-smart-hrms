@@ -86,7 +86,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/employees/{user}/approve', [\App\Http\Controllers\Admin\EmployeeController::class, 'approveUser'])->name('employees.approve');
         Route::delete('/employees/{user}/reject', [\App\Http\Controllers\Admin\EmployeeController::class, 'rejectUser'])->name('employees.reject');
 
-        Route::resource('employees', \App\Http\Controllers\Admin\EmployeeController::class)->except(['destroy']);
+        Route::resource('employees', \App\Http\Controllers\HR\EmployeeController::class)->except(['destroy']);
         Route::resource('leaves', \App\Http\Controllers\HR\LeaveController::class)
             ->only(['index', 'update'])
             ->parameters(['leaves' => 'leave']);
